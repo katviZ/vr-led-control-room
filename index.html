@@ -1,0 +1,1766 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<title>LED Control Room</title>
+<meta name="description" content="Visual Rhyme LED Control Room — redesign prototype with Light-up Preview. Offline, read-only.">
+<style>
+/* =====================================================================
+   Tokens — dark first, light via prefers-color-scheme or [data-theme]
+   ===================================================================== */
+:root {
+  --font: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Segoe UI Variable Display", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --mono: "Cascadia Mono", "Cascadia Code", Consolas, "SFMono-Regular", ui-monospace, Menlo, monospace;
+  --r-sm: 6px; --r: 10px; --r-lg: 14px; --r-xl: 18px;
+  --rail-w: 236px;
+
+  color-scheme: dark;
+  --bg: #09080d; --rail: #0c0b11; --surface: #121019; --surface-2: #17141f; --surface-3: #201c29; --inset: #0d0b12;
+  --line: rgba(255,255,255,.07); --line-2: rgba(255,255,255,.115); --line-3: rgba(255,255,255,.2);
+  --text: #efebf5; --text-2: #aca5b9; --text-3: #8f889d;
+  --brand: #9D20D6; --brand-2: #b54ae8; --brand-ink: #cf92f6; --brand-soft: rgba(157,32,214,.16); --brand-line: rgba(181,74,232,.5);
+  --on-brand: #ffffff;
+  --ok: #45d690; --ok-soft: rgba(69,214,144,.11);
+  --info: #6cb1ff; --info-soft: rgba(108,177,255,.11);
+  --warn: #f4b94c; --warn-soft: rgba(244,185,76,.12);
+  --bad: #ff6b79; --bad-soft: rgba(255,107,121,.12);
+  --focus: #e2b8ff;
+  --shadow: 0 1px 0 rgba(255,255,255,.035) inset, 0 12px 32px -16px rgba(0,0,0,.7);
+  --dot: rgba(255,255,255,.05);
+  --scrim: rgba(9,8,13,.72);
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    color-scheme: light;
+    --bg: #f5f3f8; --rail: #fbfafd; --surface: #ffffff; --surface-2: #f5f2f9; --surface-3: #ebe6f2; --inset: #f1eef5;
+    --line: rgba(28,16,52,.08); --line-2: rgba(28,16,52,.13); --line-3: rgba(28,16,52,.24);
+    --text: #17131f; --text-2: #4d4658; --text-3: #645d70;
+    --brand-ink: #7a12ae; --brand-soft: rgba(157,32,214,.085); --brand-line: rgba(157,32,214,.38);
+    --ok: #0c7646; --ok-soft: rgba(12,118,70,.09);
+    --info: #1a5cbc; --info-soft: rgba(26,92,188,.085);
+    --warn: #875400; --warn-soft: rgba(214,146,20,.14);
+    --bad: #bb1d31; --bad-soft: rgba(187,29,49,.08);
+    --focus: #7a12ae;
+    --shadow: 0 1px 2px rgba(28,16,52,.05), 0 10px 28px -16px rgba(28,16,52,.22);
+    --dot: rgba(28,16,52,.07);
+    --scrim: rgba(245,243,248,.8);
+  }
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f5f3f8; --rail: #fbfafd; --surface: #ffffff; --surface-2: #f5f2f9; --surface-3: #ebe6f2; --inset: #f1eef5;
+  --line: rgba(28,16,52,.08); --line-2: rgba(28,16,52,.13); --line-3: rgba(28,16,52,.24);
+  --text: #17131f; --text-2: #4d4658; --text-3: #645d70;
+  --brand-ink: #7a12ae; --brand-soft: rgba(157,32,214,.085); --brand-line: rgba(157,32,214,.38);
+  --ok: #0c7646; --ok-soft: rgba(12,118,70,.09);
+  --info: #1a5cbc; --info-soft: rgba(26,92,188,.085);
+  --warn: #875400; --warn-soft: rgba(214,146,20,.14);
+  --bad: #bb1d31; --bad-soft: rgba(187,29,49,.08);
+  --focus: #7a12ae;
+  --shadow: 0 1px 2px rgba(28,16,52,.05), 0 10px 28px -16px rgba(28,16,52,.22);
+  --dot: rgba(28,16,52,.07);
+  --scrim: rgba(245,243,248,.8);
+}
+
+/* =====================================================================
+   Base
+   ===================================================================== */
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font: 14px/1.5 var(--font); font-feature-settings: "tnum" 0;
+  -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+}
+h1, h2, h3, h4 { margin: 0; font-family: var(--font-display); font-weight: 600; letter-spacing: -.012em; }
+p { margin: 0; }
+a { color: var(--brand-ink); text-decoration: none; }
+a:hover { text-decoration: underline; text-underline-offset: 3px; }
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+.num, .tnum { font-variant-numeric: tabular-nums; }
+.mono { font-family: var(--mono); font-size: .92em; }
+.sr { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 6px; }
+::selection { background: var(--brand-soft); }
+svg.i { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+.skip { position: absolute; left: 12px; top: -60px; z-index: 50; background: var(--surface); padding: 8px 14px; border-radius: var(--r); border: 1px solid var(--line-2); }
+.skip:focus { top: 12px; }
+
+/* =====================================================================
+   Shell — rail on desktop, top bar + bottom tabs on phone
+   ===================================================================== */
+.app { display: grid; grid-template-columns: var(--rail-w) minmax(0, 1fr); min-height: 100vh; }
+.rail {
+  position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; gap: 22px;
+  padding: 20px 14px 16px; background: var(--rail); border-right: 1px solid var(--line);
+}
+.brand { display: flex; align-items: center; gap: 11px; padding: 2px 6px; color: var(--text); }
+.brand:hover { text-decoration: none; }
+.mark { width: 34px; height: 34px; flex: none; border-radius: 9px; background: #0a0810; box-shadow: 0 0 0 1px rgba(181,74,232,.35), 0 6px 18px -6px rgba(157,32,214,.7); display: grid; place-items: center; }
+.mark svg { width: 24px; height: 24px; }
+.brand b { display: block; font: 600 14.5px/1.2 var(--font-display); letter-spacing: -.01em; }
+.brand span { display: block; font-size: 12px; color: var(--text-3); }
+.nav { display: flex; flex-direction: column; gap: 2px; }
+.nav-label { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); padding: 0 10px 6px; }
+.nav a {
+  position: relative; display: flex; align-items: center; gap: 11px; padding: 8px 10px; border-radius: 8px;
+  color: var(--text-2); font-weight: 500; transition: background .15s, color .15s;
+}
+.nav a:hover { background: var(--surface-2); color: var(--text); text-decoration: none; }
+.nav a[aria-current="page"] { background: var(--surface-3); color: var(--text); }
+.nav a[aria-current="page"]::before { content: ""; position: absolute; left: -14px; top: 9px; bottom: 9px; width: 3px; border-radius: 0 3px 3px 0; background: var(--brand-2); box-shadow: 0 0 12px var(--brand); }
+.nav a[aria-current="page"] svg { color: var(--brand-ink); }
+.nav .count { margin-left: auto; font-size: 11.5px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+.nav .nav-t { flex: 1; }
+.rail-foot { margin-top: auto; display: flex; flex-direction: column; gap: 10px; }
+.ro {
+  display: flex; gap: 10px; align-items: flex-start; padding: 11px 12px; border-radius: var(--r); background: var(--surface);
+  border: 1px solid var(--line); font-size: 12px; color: var(--text-2); line-height: 1.4;
+}
+.ro svg { color: var(--ok); margin-top: 1px; width: 16px; height: 16px; }
+.ro b { color: var(--text); font-weight: 600; display: block; }
+.rail-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 4px; font-size: 12px; color: var(--text-3); }
+.src-dot { display: inline-flex; align-items: center; gap: 6px; }
+.src-dot::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+.src-dot.snap::before { background: var(--info); box-shadow: 0 0 8px var(--info); }
+.icon-btn {
+  display: inline-grid; place-items: center; width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--line-2);
+  background: var(--surface); color: var(--text-2);
+}
+.icon-btn:hover { color: var(--text); border-color: var(--line-3); }
+.icon-btn svg { width: 16px; height: 16px; }
+
+.mhead { display: none; }
+.main-col { min-width: 0; }
+main { padding: 34px 40px 120px; max-width: 1320px; margin: 0 auto; outline: none; }
+main.enter > * { animation: rise .32s cubic-bezier(.2,.7,.2,1) both; }
+main.enter > *:nth-child(2) { animation-delay: .03s; } main.enter > *:nth-child(3) { animation-delay: .06s; } main.enter > *:nth-child(4) { animation-delay: .09s; }
+@keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* =====================================================================
+   Page furniture
+   ===================================================================== */
+.page-head { position: relative; margin-bottom: 22px; }
+.page-head::before {
+  content: ""; position: absolute; inset: -34px -40px auto; height: 190px; z-index: -1; pointer-events: none;
+  background-image: radial-gradient(var(--dot) 1.2px, transparent 1.3px); background-size: 14px 14px;
+  -webkit-mask-image: radial-gradient(ellipse 70% 100% at 18% 0%, #000 20%, transparent 75%); mask-image: radial-gradient(ellipse 70% 100% at 18% 0%, #000 20%, transparent 75%);
+}
+.eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--brand-ink); margin-bottom: 8px; }
+.eyebrow i { width: 6px; height: 6px; border-radius: 50%; background: var(--brand-2); box-shadow: 0 0 10px var(--brand-2); }
+.page-head h1 { font-size: 30px; line-height: 1.15; letter-spacing: -.02em; }
+.lede { margin-top: 8px; color: var(--text-2); font-size: 15px; max-width: 64ch; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: var(--shadow); }
+.label { font-size: 12px; font-weight: 500; color: var(--text-3); }
+.section-title { display: flex; align-items: baseline; gap: 10px; margin: 34px 0 12px; }
+.section-title h2 { font-size: 18px; }
+.section-title p { color: var(--text-3); font-size: 13px; }
+
+/* Buttons */
+.btn {
+  display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px; border-radius: 9px;
+  border: 1px solid var(--line-2); background: var(--surface); color: var(--text); font-weight: 500; font-size: 13.5px; white-space: nowrap;
+  transition: border-color .15s, background .15s, transform .1s;
+}
+.btn:hover { border-color: var(--line-3); background: var(--surface-2); text-decoration: none; }
+.btn:active { transform: translateY(1px); }
+.btn svg { width: 16px; height: 16px; }
+.btn.primary { background: var(--brand); border-color: transparent; color: var(--on-brand); box-shadow: 0 6px 18px -8px rgba(157,32,214,.8), inset 0 1px 0 rgba(255,255,255,.18); }
+.btn.primary:hover { background: #8c19c2; }
+.btn.ghost { background: transparent; border-color: transparent; color: var(--text-2); }
+.btn.ghost:hover { background: var(--surface-2); color: var(--text); }
+.btn.set { border-color: var(--brand-line); color: var(--brand-ink); background: var(--brand-soft); }
+
+/* Status language */
+.pill {
+  display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 9px 0 8px; border-radius: 99px;
+  font-size: 12px; font-weight: 600; white-space: nowrap; letter-spacing: .005em;
+}
+.pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.pill.ok { color: var(--ok); background: var(--ok-soft); }
+.pill.info { color: var(--info); background: var(--info-soft); }
+.pill.amber { color: var(--warn); background: var(--warn-soft); }
+.pill.red { color: var(--bad); background: var(--bad-soft); }
+.pill.neutral { color: var(--text-2); background: var(--surface-3); }
+.pill.neutral::before { display: none; }
+.brand-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--text-2); white-space: nowrap; }
+.brand-chip::before { content: ""; width: 8px; height: 8px; border-radius: 2px; }
+.brand-chip.NovaStar::before { background: #e8763a; }
+.brand-chip.Colorlight::before { background: #3aa7e8; }
+.chip { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 6px; background: var(--surface-3); color: var(--text-2); font: 500 12px/1 var(--mono); white-space: nowrap; }
+
+/* =====================================================================
+   Overview
+   ===================================================================== */
+.ov { display: grid; grid-template-columns: minmax(0, 2.1fr) repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
+.ov .card { padding: 16px 18px; }
+.ov-stat b { display: block; font: 600 28px/1.1 var(--font-display); letter-spacing: -.02em; margin-top: 8px; font-variant-numeric: tabular-nums; }
+.ov-stat .meta { display: block; font-size: 12.5px; color: var(--text-3); margin-top: 4px; }
+.ov-health .top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.ov-health .big { font: 600 15px/1.2 var(--font-display); color: var(--warn); font-variant-numeric: tabular-nums; }
+.stackbar { display: flex; gap: 3px; height: 10px; margin: 14px 0 12px; }
+.stackbar span { border-radius: 3px; min-width: 3px; }
+.stackbar .ok { background: var(--ok); } .stackbar .info { background: var(--info); } .stackbar .amber { background: var(--warn); } .stackbar .red { background: var(--bad); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0; padding: 0; list-style: none; font-size: 12.5px; color: var(--text-2); }
+.legend li { display: inline-flex; align-items: center; gap: 7px; }
+.legend li::before { content: ""; width: 8px; height: 8px; border-radius: 2px; background: var(--c); }
+.legend b { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+.callout {
+  display: flex; align-items: center; gap: 14px; padding: 12px 14px 12px 16px; margin-bottom: 18px; border-radius: var(--r-lg);
+  border: 1px solid var(--brand-line); background: linear-gradient(90deg, var(--brand-soft), transparent 70%);
+}
+.callout .new { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--on-brand); background: var(--brand); padding: 3px 7px; border-radius: 5px; }
+.callout p { flex: 1; color: var(--text-2); }
+.callout p b { color: var(--text); font-weight: 600; }
+
+/* =====================================================================
+   Toolbar
+   ===================================================================== */
+.toolbar {
+  position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+  padding: 12px 0; margin: 0 0 4px; background: color-mix(in srgb, var(--bg) 88%, transparent);
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+}
+.search { position: relative; flex: 1 1 320px; display: flex; align-items: center; min-width: 0; }
+.search svg { position: absolute; left: 12px; color: var(--text-3); pointer-events: none; }
+.search input {
+  width: 100%; height: 40px; padding: 0 44px 0 38px; border-radius: 10px; border: 1px solid var(--line-2);
+  background: var(--surface); color: var(--text); outline: none; transition: border-color .15s, box-shadow .15s;
+}
+.search input::placeholder { color: var(--text-3); }
+.search input:focus { border-color: var(--brand-line); box-shadow: 0 0 0 3px var(--brand-soft); }
+.search kbd { position: absolute; right: 10px; font: 500 11px/1 var(--mono); color: var(--text-3); border: 1px solid var(--line-2); border-radius: 5px; padding: 3px 6px; background: var(--surface-2); }
+.seg { display: inline-flex; padding: 3px; gap: 2px; border-radius: 10px; background: var(--surface); border: 1px solid var(--line-2); }
+.seg button { height: 32px; padding: 0 12px; border: 0; border-radius: 7px; background: transparent; color: var(--text-2); font-weight: 500; font-size: 13px; white-space: nowrap; }
+.seg button:hover { color: var(--text); }
+.seg button[aria-pressed="true"] { background: var(--surface-3); color: var(--text); box-shadow: 0 0 0 1px var(--line-2) inset; }
+.seg .n { color: var(--text-3); font-size: 12px; margin-left: 4px; font-variant-numeric: tabular-nums; }
+.switch { display: inline-flex; align-items: center; gap: 9px; font-size: 13px; color: var(--text-2); cursor: pointer; user-select: none; white-space: nowrap; }
+.switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.switch .track { width: 32px; height: 18px; border-radius: 99px; background: var(--surface-3); border: 1px solid var(--line-2); position: relative; transition: background .15s; }
+.switch .track::after { content: ""; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: var(--text-2); transition: transform .18s, background .15s; }
+.switch input:checked + .track { background: var(--brand); border-color: transparent; }
+.switch input:checked + .track::after { transform: translateX(14px); background: #fff; }
+.switch input:focus-visible + .track { outline: 2px solid var(--focus); outline-offset: 2px; }
+.results-meta { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 6px 2px 10px; font-size: 12.5px; color: var(--text-3); }
+
+/* =====================================================================
+   Tables
+   ===================================================================== */
+.table-wrap { overflow-x: auto; border-radius: var(--r-lg); border: 1px solid var(--line); background: var(--surface); box-shadow: var(--shadow); }
+table.data { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.data th {
+  text-align: left; font-size: 11.5px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--text-3);
+  padding: 12px 14px; border-bottom: 1px solid var(--line); white-space: nowrap; background: var(--surface);
+}
+.data td { padding: 11px 14px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.data tbody tr:last-child td { border-bottom: 0; }
+.data tr.row { cursor: pointer; transition: background .12s; }
+.data tr.row:hover { background: var(--surface-2); }
+.data td.num, .data th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.data .name a { color: var(--text); font-weight: 600; word-break: break-word; }
+.data .name a:hover { color: var(--brand-ink); }
+.data .name .sub { display: none; }
+.data .dim { color: var(--text-3); }
+.data .sites { color: var(--text-2); max-width: 260px; }
+.bright { display: inline-flex; align-items: center; gap: 8px; justify-content: flex-end; }
+.meter { width: 36px; height: 4px; border-radius: 4px; background: var(--surface-3); overflow: hidden; }
+.meter i { display: block; height: 100%; background: var(--text-3); border-radius: 4px; }
+.meter.low i { background: var(--warn); }
+.more-row { display: flex; justify-content: center; padding: 14px; }
+
+/* Empty + loading */
+.empty { display: grid; justify-items: center; text-align: center; gap: 10px; padding: 56px 20px; }
+.empty svg.art { width: 92px; height: 60px; margin-bottom: 6px; }
+.empty h3 { font-size: 17px; }
+.empty p { color: var(--text-2); max-width: 46ch; }
+.empty .btn { margin-top: 6px; }
+.skel { display: grid; gap: 0; }
+.skel div { height: 46px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 16px; padding: 0 14px; }
+.skel span { height: 10px; border-radius: 5px; background: linear-gradient(90deg, var(--surface-2), var(--surface-3), var(--surface-2)); background-size: 200% 100%; animation: shimmer 1.4s linear infinite; }
+@keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+/* =====================================================================
+   Detail
+   ===================================================================== */
+.crumbs { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-3); margin-bottom: 18px; min-width: 0; }
+.crumbs a { display: inline-flex; align-items: center; gap: 4px; color: var(--text-2); }
+.crumbs a svg { width: 16px; height: 16px; }
+.crumbs span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.d-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; flex-wrap: wrap; margin-bottom: 20px; }
+.d-title { min-width: 0; flex: 1 1 420px; }
+.d-title h1 { font-size: 26px; line-height: 1.2; letter-spacing: -.02em; word-break: break-word; }
+.d-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-top: 10px; color: var(--text-2); font-size: 13px; }
+.d-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.verdict { display: grid; grid-template-columns: auto 1fr; gap: 14px; padding: 16px 18px; border-radius: var(--r-lg); border: 1px solid var(--line); background: var(--surface); position: relative; overflow: hidden; }
+.verdict::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--c); }
+.verdict .vi { width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; color: var(--c); background: var(--cs); }
+.verdict h2 { font-size: 16px; }
+.verdict .vsub { color: var(--text-2); margin-top: 2px; }
+.findings { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 8px; }
+.findings li { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: start; padding: 10px 12px; border-radius: var(--r); background: var(--surface-2); }
+.findings b { font-weight: 600; display: block; }
+.findings p { color: var(--text-2); font-size: 13px; margin-top: 2px; }
+.keys { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 1px; margin-top: 14px; border-radius: var(--r-lg); overflow: hidden; border: 1px solid var(--line); background: var(--line); }
+.keys div { background: var(--surface); padding: 13px 16px; min-width: 0; }
+.keys b { display: block; font: 600 19px/1.2 var(--font-display); margin-top: 5px; font-variant-numeric: tabular-nums; letter-spacing: -.01em; overflow-wrap: anywhere; }
+.keys small { display: block; font-size: 11.5px; color: var(--text-3); margin-top: 2px; }
+.keys .warn b { color: var(--warn); }
+
+.specs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.specs .card { padding: 6px 18px 8px; }
+.specs h3 { font-size: 13px; font-weight: 600; color: var(--text-2); padding: 12px 0 6px; letter-spacing: 0; }
+.specs dl { margin: 0; }
+.specs .kv { display: flex; justify-content: space-between; gap: 16px; padding: 8px 0; border-top: 1px solid var(--line); font-size: 13.5px; }
+.specs dt { color: var(--text-2); }
+.specs dd { margin: 0; text-align: right; font-weight: 500; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.specs dd small { display: block; color: var(--text-3); font-weight: 400; font-size: 12px; }
+.bad-txt { color: var(--bad); } .ok-txt { color: var(--ok); } .warn-txt { color: var(--warn); }
+
+/* =====================================================================
+   Light-up Preview
+   ===================================================================== */
+.lp { margin-top: 34px; border-radius: var(--r-xl); border: 1px solid var(--line); background: var(--surface); box-shadow: var(--shadow); overflow: hidden; }
+.lp-top {
+  display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; padding: 22px 24px 18px;
+  border-bottom: 1px solid var(--line); position: relative;
+  background:
+    radial-gradient(ellipse 60% 140% at 0% 0%, var(--brand-soft), transparent 70%),
+    radial-gradient(var(--dot) 1.1px, transparent 1.2px) 0 0 / 12px 12px;
+}
+.lp-top h2 { font-size: 21px; display: flex; align-items: center; gap: 10px; }
+.lp-top p { color: var(--text-2); margin-top: 4px; max-width: 70ch; }
+.src-tag { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 500; padding: 5px 10px; border-radius: 99px; border: 1px solid var(--line-2); background: var(--surface); color: var(--text-2); }
+.src-tag::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--ok); }
+.src-tag.std::before { background: var(--info); }
+.lp-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; background: var(--line); }
+.lp-grid > * { background: var(--surface); padding: 20px 24px 22px; min-width: 0; }
+.lp-grid > .wide { grid-column: 1 / -1; }
+.lp-h { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.lp-h h3 { font-size: 15px; display: flex; align-items: center; gap: 9px; }
+.lp-h h3 .step { font: 600 11px/1 var(--mono); color: var(--brand-ink); background: var(--brand-soft); padding: 4px 6px; border-radius: 5px; }
+.lp-h .tag { font: 500 12px/1 var(--mono); color: var(--text-3); }
+.caption { color: var(--text-2); font-size: 13.5px; }
+.caption b { color: var(--text); font-weight: 600; }
+.note { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: var(--r); background: var(--info-soft); color: var(--text-2); font-size: 13px; }
+.note svg { color: var(--info); width: 16px; height: 16px; margin-top: 2px; }
+.check-line { display: flex; gap: 8px; align-items: flex-start; font-size: 12.5px; color: var(--text-2); }
+.check-line svg { width: 15px; height: 15px; margin-top: 2px; }
+.check-line.ok svg { color: var(--ok); } .check-line.warn svg { color: var(--warn); }
+
+.led-stage { background: #060509; border-radius: var(--r); border: 1px solid rgba(255,255,255,.08); padding: 14px; box-shadow: inset 0 0 0 1px rgba(0,0,0,.4), inset 0 20px 50px -30px rgba(157,32,214,.35); min-width: 0; }
+.ds-note { margin-top: 10px; text-align: center; font: 500 11.5px/1.3 var(--mono); color: #9a93a8; }
+.led-stage canvas { display: block; max-width: 100%; height: auto; margin: 0 auto; image-rendering: auto; }
+
+.scan-body { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 22px; align-items: start; }
+.scan-side { display: grid; gap: 14px; }
+.readout { font: 500 12.5px/1.45 var(--mono); color: var(--text); background: var(--inset); border: 1px solid var(--line); border-radius: var(--r); padding: 10px 12px; min-height: 58px; }
+.readout span { color: var(--text-3); }
+.controls { display: grid; gap: 10px; }
+.ctl-row { display: flex; gap: 8px; align-items: center; }
+.speed { display: grid; gap: 6px; }
+.speed label { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--text-2); }
+.speed output { font-family: var(--mono); color: var(--text); font-size: 12px; }
+input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 22px; background: transparent; }
+input[type="range"]::-webkit-slider-runnable-track { height: 4px; border-radius: 4px; background: linear-gradient(90deg, var(--brand-2) var(--p, 30%), var(--surface-3) var(--p, 30%)); }
+input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; margin-top: -6px; border-radius: 50%; background: #fff; border: 0; box-shadow: 0 0 0 4px rgba(157,32,214,.35), 0 2px 6px rgba(0,0,0,.4); }
+input[type="range"]::-moz-range-track { height: 4px; border-radius: 4px; background: var(--surface-3); }
+input[type="range"]::-moz-range-progress { height: 4px; border-radius: 4px; background: var(--brand-2); }
+input[type="range"]::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: #fff; border: 0; box-shadow: 0 0 0 4px rgba(157,32,214,.35); }
+.speed .ends { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-3); }
+.order-h { font-size: 12px; color: var(--text-3); margin-bottom: 6px; display: flex; justify-content: space-between; gap: 8px; }
+.order { display: flex; flex-wrap: wrap; gap: 3px; }
+.order span { min-width: 22px; height: 20px; padding: 0 3px; display: grid; place-items: center; border-radius: 4px; font: 500 10.5px/1 var(--mono); color: var(--text-3); background: var(--surface-2); font-variant-numeric: tabular-nums; }
+.order span.on { background: var(--brand); color: #fff; box-shadow: 0 0 10px rgba(181,74,232,.6); }
+.rm-note { font-size: 12px; color: var(--text-3); }
+
+.pic-ctl { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 14px; }
+.file-btn { position: relative; }
+.file-btn input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
+.file-btn:focus-within { outline: 2px solid var(--focus); outline-offset: 2px; }
+.pics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.pic figure { margin: 0; }
+.pic-h { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+.pic-h b { font-size: 13.5px; font-weight: 600; }
+.pic-h b.file { color: var(--brand-ink); }
+.pic-h span { font: 500 11.5px/1.3 var(--mono); color: var(--text-3); }
+.applied { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.applied .chip { height: auto; padding: 5px 8px; line-height: 1.25; white-space: normal; }
+.disclaimer { margin-top: 14px; font-size: 12.5px; color: var(--text-3); display: flex; gap: 8px; align-items: center; }
+.disclaimer svg { width: 14px; height: 14px; }
+
+.gamma svg, .cab svg { width: 100%; height: auto; display: block; }
+.gamma .ax { stroke: var(--line-3); stroke-width: 1; }
+.gamma .grid { stroke: var(--line); stroke-width: 1; }
+.gamma text, .cab text { fill: var(--text-3); font: 500 10.5px var(--font); }
+.gamma .t-axis { fill: var(--text-2); font-size: 11px; }
+.gamma .ref { stroke: var(--text-3); stroke-width: 1.6; stroke-dasharray: 4 4; fill: none; }
+.gamma .file { stroke: var(--brand-2); stroke-width: 2.4; fill: none; }
+.gamma .file.rebuilt { stroke-dasharray: 1 4; }
+.gamma .mk-file { fill: var(--brand-2); } .gamma .mk-ref { fill: var(--text-3); }
+.gamma .lbl-file { fill: var(--brand-ink); font-weight: 600; } .gamma .lbl-ref { fill: var(--text-2); }
+.g-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12.5px; color: var(--text-2); margin: 10px 0 8px; }
+.g-legend span { display: inline-flex; align-items: center; gap: 7px; }
+.g-legend i { width: 18px; height: 0; border-top: 2.4px solid var(--brand-2); }
+.g-legend i.r { border-top: 1.6px dashed var(--text-3); }
+.cab .mod { fill: url(#ledpat); stroke: var(--line-3); stroke-width: 1; }
+.cab .mod-bg { fill: #0b0910; }
+.cab .px { fill: #e9e3f2; font: 600 11px var(--mono); }
+.cab .badge { fill: var(--brand); }
+.cab .badge-t { fill: #fff; font: 700 10px var(--font); }
+.cab .flow { stroke: var(--brand-2); stroke-width: 2; fill: none; }
+.cab .in-t { fill: var(--brand-ink); font-weight: 700; font-size: 10.5px; letter-spacing: .06em; }
+.cab .dim-t { fill: var(--text-2); font-size: 11px; }
+.cab-wrap { background: #060509; border-radius: var(--r); padding: 14px; border: 1px solid rgba(255,255,255,.08); }
+.cab-wrap text.px { fill: #e9e3f2; }
+.cab-wrap text.dim-t { fill: #b6aec4; }
+.cab-wrap text.in-t { fill: #d9a3fa; }
+.cab-wrap .mod { stroke: rgba(255,255,255,.22); }
+
+/* =====================================================================
+   Sites
+   ===================================================================== */
+.site-list { display: grid; gap: 8px; }
+.site { border-radius: var(--r-lg); border: 1px solid var(--line); background: var(--surface); box-shadow: var(--shadow); overflow: hidden; }
+.site summary {
+  list-style: none; display: grid; grid-template-columns: 110px minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr) auto; gap: 16px; align-items: center;
+  padding: 13px 16px; cursor: pointer; transition: background .12s;
+}
+.site summary::-webkit-details-marker { display: none; }
+.site summary:hover { background: var(--surface-2); }
+.site .nm { font-weight: 600; overflow-wrap: anywhere; }
+.site .nm small { display: block; font-weight: 400; color: var(--text-3); font-size: 12.5px; margin-top: 1px; }
+.site .cell-l { font-size: 12px; color: var(--text-3); display: block; }
+.site .chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.site .chev { color: var(--text-3); transition: transform .18s; }
+.site[open] .chev { transform: rotate(90deg); }
+.site-body { padding: 4px 16px 16px; border-top: 1px solid var(--line); display: grid; gap: 12px; }
+.site-body .facts { display: flex; flex-wrap: wrap; gap: 8px 28px; padding-top: 12px; font-size: 13px; color: var(--text-2); }
+.site-body .facts b { color: var(--text); font-weight: 500; }
+.flags { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.flags li { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: start; padding: 9px 12px; border-radius: var(--r); background: var(--surface-2); font-size: 13px; }
+.flags small { display: block; color: var(--text-3); font-family: var(--mono); font-size: 11.5px; margin-top: 2px; overflow-wrap: anywhere; }
+.files { display: flex; flex-wrap: wrap; gap: 6px; }
+.files a { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 8px; border: 1px solid var(--line-2); font-size: 12.5px; color: var(--text); max-width: 100%; overflow-wrap: anywhere; }
+.files a:hover { border-color: var(--brand-line); text-decoration: none; color: var(--brand-ink); }
+.files a.fw { color: var(--text-2); }
+.allgood { display: inline-flex; align-items: center; gap: 8px; color: var(--ok); font-weight: 500; }
+.allgood svg { width: 16px; height: 16px; }
+
+/* Compare tray + toast */
+.tray {
+  position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 20; display: flex; align-items: center; gap: 10px;
+  padding: 8px 8px 8px 14px; border-radius: 14px; background: var(--surface-3); border: 1px solid var(--line-2);
+  box-shadow: 0 20px 40px -12px rgba(0,0,0,.55); max-width: calc(100vw - 32px); font-size: 13px;
+}
+.tray[hidden] { display: none; }
+.tray .slot { display: inline-flex; align-items: center; gap: 6px; min-width: 0; max-width: 220px; color: var(--text-2); }
+.tray .slot b { font: 700 11px/1 var(--font); color: #fff; background: var(--brand); border-radius: 4px; padding: 3px 5px; }
+.tray .slot span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.toast { position: fixed; right: 20px; top: 20px; z-index: 30; padding: 10px 14px; border-radius: 10px; background: var(--surface-3); border: 1px solid var(--line-2); box-shadow: 0 16px 30px -12px rgba(0,0,0,.5); font-size: 13px; opacity: 0; transform: translateY(-6px); transition: opacity .2s, transform .2s; pointer-events: none; }
+.toast.on { opacity: 1; transform: none; }
+
+/* Compare + inspect + firmware bits */
+.cmp-slots { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+.cmp-slot { padding: 14px 16px; }
+.cmp-slot label { display: block; font-size: 12px; color: var(--text-3); margin-bottom: 6px; font-weight: 600; letter-spacing: .04em; }
+.cmp-slot input { width: 100%; height: 38px; border-radius: 9px; border: 1px solid var(--line-2); background: var(--surface-2); padding: 0 12px; color: var(--text); }
+.diff-a { color: var(--warn); } .diff-b { color: var(--info); }
+.drop {
+  display: grid; place-items: center; text-align: center; gap: 6px; padding: 54px 20px; border-radius: var(--r-xl);
+  border: 1.5px dashed var(--line-3); background: radial-gradient(var(--dot) 1.2px, transparent 1.3px) 0 0 / 14px 14px, var(--surface);
+  cursor: pointer; transition: border-color .15s, background-color .15s;
+}
+.drop:hover, .drop.over { border-color: var(--brand-2); }
+.drop:focus-within { outline: 2px solid var(--focus); outline-offset: 3px; }
+.drop b { font: 600 18px/1.3 var(--font-display); }
+.drop span { color: var(--text-2); }
+.checks-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 16px; }
+.banner { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: var(--r); background: var(--warn-soft); color: var(--text); font-size: 13px; margin-bottom: 16px; }
+.banner svg { color: var(--warn); width: 16px; height: 16px; margin-top: 2px; }
+
+/* =====================================================================
+   Responsive
+   ===================================================================== */
+@media (max-width: 1180px) {
+  .ov { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .ov-health { grid-column: 1 / -1; }
+  .keys { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .scan-body { grid-template-columns: minmax(0, 1fr); }
+  .data .hide-lg { display: none; }
+}
+@media (max-width: 980px) {
+  :root { --rail-w: 72px; }
+  .rail { padding: 18px 10px; align-items: center; }
+  .brand > div, .nav-label, .nav .nav-t, .nav .count, .ro div, .rail-row .src-dot { display: none; }
+  .nav a { justify-content: center; padding: 10px; }
+  .nav a[aria-current="page"]::before { left: -10px; }
+  .ro { padding: 10px; }
+  .rail-row { justify-content: center; }
+  main { padding: 28px 24px 120px; }
+  .lp-grid { grid-template-columns: minmax(0, 1fr); }
+  .specs { grid-template-columns: minmax(0, 1fr); }
+  .site summary { grid-template-columns: 104px minmax(0, 1fr) auto auto; }
+  .site .hide-md { display: none; }
+}
+@media (max-width: 720px) {
+  .app { display: block; }
+  .rail {
+    position: fixed; z-index: 15; top: auto; bottom: 0; left: 0; right: 0; height: auto; flex-direction: row; padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+    border-right: 0; border-top: 1px solid var(--line); background: color-mix(in srgb, var(--rail) 92%, transparent);
+    -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  }
+  .rail .brand, .rail-foot, .nav-label { display: none; }
+  .nav { flex-direction: row; width: 100%; justify-content: space-around; gap: 0; }
+  .nav a { flex-direction: column; gap: 3px; padding: 6px 4px; font-size: 11px; flex: 1; min-width: 0; }
+  .nav .nav-t { display: block; flex: none; }
+  .nav a[aria-current="page"] { background: transparent; color: var(--text); }
+  .nav a[aria-current="page"]::before { left: 30%; right: 30%; top: -7px; bottom: auto; width: auto; height: 3px; border-radius: 0 0 3px 3px; }
+  .mhead {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--line);
+    background: var(--rail); position: sticky; top: 0; z-index: 10;
+  }
+  .mhead .brand > div { display: block; }
+  .mhead .brand b { font-size: 14px; }
+  .mhead .mark { width: 30px; height: 30px; }
+  .mhead .ro-m { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--text-2); padding: 5px 9px; border: 1px solid var(--line-2); border-radius: 99px; white-space: nowrap; }
+  .mhead .ro-m svg { width: 13px; height: 13px; color: var(--ok); }
+  main { padding: 22px 16px 110px; }
+  .page-head h1 { font-size: 25px; }
+  .page-head::before { inset: -22px -16px auto; }
+  .lede { font-size: 14px; }
+  .ov { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .ov .card { padding: 12px 12px; }
+  .ov-stat b { font-size: 22px; }
+  .ov-stat .meta { font-size: 11.5px; }
+  .callout { flex-wrap: wrap; align-items: flex-start; }
+  .callout p { flex: 1 1 calc(100% - 70px); }
+  .callout .btn { width: 100%; justify-content: center; }
+  .toolbar { top: 57px; gap: 8px; }
+  .search { flex-basis: 100%; }
+  .search kbd { display: none; }
+  .seg button { padding: 0 9px; font-size: 12.5px; }
+  .seg .n { display: none; }
+  /* table rows become cards */
+  table.data thead { display: none; }
+  table.data, .data tbody, .data tr { display: block; }
+  .data tr.row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+  .data tbody tr:last-child { border-bottom: 0; }
+  .data td { display: none; padding: 0; border: 0; }
+  .data td.name { display: block; grid-column: 1; }
+  .data td.st { display: block; grid-column: 2; grid-row: 1; justify-self: end; }
+  .data .name .sub { display: block; font-size: 12.5px; color: var(--text-2); margin-top: 3px; font-weight: 400; }
+  .data .name .sub.s2 { color: var(--text-3); }
+  .table-wrap { overflow: hidden; }
+  .d-title h1 { font-size: 21px; }
+  .d-actions { width: 100%; }
+  .d-actions .btn { flex: 1 1 auto; justify-content: center; }
+  .keys { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .keys b { font-size: 17px; }
+  .lp-top, .lp-grid > * { padding-left: 16px; padding-right: 16px; }
+  .led-stage { padding: 8px; }
+  .pics { grid-template-columns: minmax(0, 1fr); }
+  .site summary { grid-template-columns: minmax(0, 1fr) auto; gap: 6px 10px; }
+  .site summary .st { grid-column: 1 / -1; order: -1; }
+  .hide-sm, .site .hide-sm { display: none; }
+  .cmp-slots { grid-template-columns: minmax(0, 1fr); }
+  .tray { bottom: 76px; }
+  .toast { left: 16px; right: 16px; top: 64px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<div class="app">
+  <aside class="rail" aria-label="Main">
+    <a class="brand" href="#inspect" aria-label="LED Control Room home">
+      <span class="mark" aria-hidden="true"><svg viewBox="0 0 24 24" id="mark-svg"></svg></span>
+      <div><b>LED Control Room</b><span>Visual Rhyme</span></div>
+    </a>
+    <nav class="nav" aria-label="Sections">
+      <div class="nav-label">Workspace</div>
+      <a href="#inspect" data-view="inspect"><svg class="i" viewBox="0 0 24 24"><path d="M4 8V5.5A1.5 1.5 0 0 1 5.5 4H8M16 4h2.5A1.5 1.5 0 0 1 20 5.5V8M20 16v2.5a1.5 1.5 0 0 1-1.5 1.5H16M8 20H5.5A1.5 1.5 0 0 1 4 18.5V16M4 12h16"/></svg><span class="nav-t">Inspect</span></a>
+    </nav>
+    <div class="rail-foot">
+      <div class="ro" title="This tool never sends anything to a screen and never changes firmware.">
+        <svg class="i" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+        <div><b>Read-only</b>Nothing is sent to screens.</div>
+      </div>
+      <div class="rail-row">
+        <span class="src-dot" id="src-dot">Local</span>
+        <button class="icon-btn" id="theme-btn" type="button" aria-label="Theme: system"><svg class="i" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z"/></svg></button>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main-col">
+    <header class="mhead">
+      <a class="brand" href="#inspect"><span class="mark" aria-hidden="true"><svg viewBox="0 0 24 24" class="mark-m"></svg></span><div><b>LED Control Room</b></div></a>
+      <span class="ro-m"><svg class="i" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Read-only</span>
+    </header>
+    <main id="main" tabindex="-1"></main>
+  </div>
+</div>
+
+<div class="tray" id="tray" hidden role="region" aria-label="Compare selection"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="web_online.js"></script>
+<script>window.VR_CHIPS={"374":"ICND3069","463":"ICND3069","295":"ICND3065","465":"ICND3065","419":"ICND3150S","384":"ICND2270_V2.0","291":"ICND2260TTL_V2.0","313":"ICND2260mini","262":"ICND2263","205":"ICND2210","131":"ICND2200","288":"ICND2169","274":"ICND2165","153":"ICND2163","461":"ICND2165","209":"ICND2159","258":"ICND2153P","354":"ICND2153S","466":"ICND2153S","158":"ICND2153","472":"ICND2153U","289":"ICND2152","259":"ICND2150S","159":"ICND2150","443":"ICND2163S","143":"ICND2112","105":"ICND2100/ICN2110","167":"ICND2076","118":"ICND2065/ICND2069","459":"ICND2065/ICND2069","275":"ICND2055S","462":"ICND2055S","107":"ICND2055/ICND2059","455":"ICND2055/ICND2059","428":"ICND2069S","404":"ICND7001","302":"ICND1069","470":"ICND1069","368":"ICND1068","386":"ICND1065L","331":"ICND1065S","464":"ICND1065S","294":"ICND1065","283":"ICND1063","226":"ICN2126","81":"ICN2053","110":"ICN2050","169":"ICN2047","144":"ICN2046/ICN2049","88":"ICN2038S/ICN2045","74":"ICN2038A","58":"ICN2038","59":"ICN2027","409":"MBS7752","382":"MBS7264","469":"MBS7264","445":"MBS7252","435":"MBS7253","53":"MBIA043","201":"MBI6033","35":"MBI6030","48":"MBI6023","268":"MBI5864","151":"MBI5850","250":"MBI5850B","346":"MBI5762A","148":"MBI5759","392":"MBI5756","251":"MBI5754B","177":"MBI5754","117":"MBI5359","114":"MBI5353B","64":"MBI5353","242":"MBI5269","215":"MBI5268","42":"MBI5266","188":"MBI5264","479":"MBI5264","297":"MBI5262","290":"MBI5261","179":"MBI5254","227":"MBI5253B","477":"MBI5253B","79":"MBI5253 01d","119":"MBI5253","223":"MBI5252B","51":"MBI5252","175":"MBI5251","474":"MBI5251","20":"MBI5224","7":"MBI5167","45":"MBI5166","46":"MBI5155","33":"MBI5153","29":"MBI5152","32":"MBI5151","104":"MBI5125-DPW","103":"MBI5125","139":"MBI5124-NEW","49":"MBI5124-DPWM","31":"MBI5124","47":"MBI5122","23":"MBI5053","22":"MBI5052","77":"MBI5051B","21":"MBI5051","6":"MBI5050","27":"MBI5045","52":"MBI5043","26":"MBI5042B","5":"MBI5042/5041","56":"MBI5041Q","55":"MBI5041B","4":"MBI5040","17":"MBI5039","57":"MBI5038","16":"MBI5037","3":"MBI5036","233":"MBI5034B","13":"MBI5034","2":"MBI5030","1":"MBI5028","401":"CFD304","342":"CFD955B","400":"CFD955C","422":"CFD969","336":"CFD855A","421":"CFD335B","322":"CFD555B","424":"C8485","383":"CFD655","486":"CFD655","236":"CFD555A","489":"CFD977B","439":"CFD325E","280":"CFD465A","281":"CFD455C","228":"CFD455A","411":"CFD455J","231":"CFD435A","367":"CFD433","278":"CFD325A","187":"CS2033/CFD335A","196":"CS2066","181":"CS2017S","180":"CS2017","311":"C8455","363":"C8385","484":"C8385","387":"C8365","485":"C8365","349":"C8325","487":"CFD455C","488":"C8455","307":"DP5135Common","299":"DP5135","360":"DP5125H","377":"DP3369S","376":"DP3365S","425":"DP3365S","389":"DP3367S","471":"DP3367S","319":"DP3368","427":"DP3368","480":"DP3269","481":"DP3356","482":"DP3364","375":"DP3364S","330":"DP3364","378":"DP3357","329":"DP3356","468":"DP6366S","433":"DP3370S","510":"DP3358S","328":"DP3256","426":"DP3265","504":"DP3265S","339":"DP3254","357":"DP3252","220":"DP3246","358":"DP3153","296":"DP3269","241":"DP3265","397":"DP3265S","286":"DP3265I","219":"DP3264","248":"DP3263","141":"LS9961","98":"LS9960","190":"LS9935B","166":"LS9935","334":"LS9956","410":"LS9952","306":"LS9937","423":"LS9937D","396":"LS9932","230":"LS9936","271":"LS9933","238":"LS9931","137":"LS9030","418":"LS9001","348":"LS9001","508":"LS9001","277":"LS9004","347":"LS9005","270":"LS9929C","113":"LS9929","191":"LS9928","165":"LS9926","164":"LS9920","150":"LS9919","101":"LS9918","154":"LS9917","213":"LS9903","293":"SM16609","256":"SM16509/SM16389SF","416":"SM16510SC","221":"SM16389","240":"SM16388","432":"MW16330","352":"SM16380SW","326":"SM16380SH/SA","493":"SM16380SH/SA","494":"SM16386S","495":"SM16386SH","496":"SM16510SC","497":"SM16380SW","498":"SM16169SW","499":"SM16269SW","500":"SM16189SC","370":"SM16386S","413":"SM16386SH","232":"SM16380","197":"SM16369","147":"SM16359","279":"SM16318","407":"SM16399","513":"SM16519S","507":"SM16339","298":"SM16208","320":"SM16289","122":"SM16259","126":"SM16237P","135":"SM16237DS","99":"SM16237","412":"SM16269S","414":"SM16269SW","127":"SM16227P","112":"SM16227","85":"SM16207S","115":"SM16188B","353":"SM16169SW","323":"SM16169SH/SL","163":"SM16169S","61":"SM16159","43":"SM16158","38":"SM16136","415":"SM16189SC","60":"SM16027","83":"SM16017S","212":"SM16017DS","361":"FM6869","324":"FM6864","503":"FM6869","502":"FM6864","249":"FM6565CE","199":"FM6565/FM6569","200":"FM6555","216":"FM6518","405":"FM6565E","350":"FM6373","406":"FM6373C","208":"FM6363","183":"FM6356","182":"FM6353","116":"FM6182","130":"FM6153/FM6253","172":"FM6127","136":"FM6126","129":"FM6124","206":"FM6047","174":"XM11920G","194":"XM11202G","193":"XM11201G","300":"XM10486G","247":"XM10480G","394":"XM11203G","395":"XM11206G","72":"MY9868A","39":"MY9868","149":"MY9866_Common","120":"MY9866","73":"MY9862A","54":"MY9862","355":"MY9758A","204":"MY9758","128":"MY9748","82":"MY9373","50":"MY9366","89":"MY9348","25":"MY9269","18":"MY9268","24":"MY9266","75":"MY9263","37":"MY9262","69":"MY9231","30":"MY9221","34":"MY9163","399":"LYD2200","0":"通用芯片","224":"通用归零码芯片","385":"CommonRZCChipV2","449":"MW1882","195":"AXS6018","264":"CX5721","343":"CX5720","189":"HS3257","218":"HBS1910","364":"QS2633","310":"NT27052","316":"NT27003","239":"NT27002S","301":"TA8028","100":"ICN2038S_Common","408":"TBS3266A","381":"TBS5266A","365":"TBS5266B","134":"IT1505","133":"ISA2020","138":"LD1512","303":"MT100","366":"SCK3079","245":"TBS5367","304":"TBS2218","371":"TX1816","345":"TX1812","178":"VOD5153","184":"YY6018","253":"CNS7263","173":"CNS7253","152":"CNS7153","207":"DM413","8":"DM13H","95":"GW6808","65":"GW6205","66":"GW6202B","362":"HX8964","390":"HX8932","198":"HX8864","284":"HX8863/8865","456":"HX8016H","473":"HX8065","344":"HX8866","305":"HX8128","168":"HX8055","225":"HX5011","260":"RT5967","244":"RT5938SS Common","36":"RT5924A","12":"RFT3630","9":"P2518","11":"P2510","176":"SCL8081","121":"SCL8080","19":"SCL8060","379":"xcolor888","380":"xcolor999","62":"TLS3001","192":"TLC6983","63":"TLC59581","41":"TLC5958","87":"TLC5948A","44":"TLC5929","234":"TL3103UD","263":"TL3102UD","76":"UCS9812","276":"UCS8603","102":"UCS5603","146":"UCS512C","140":"UCS1912","91":"SUM2135","71":"SUM2131","86":"SUM2117","90":"SUM2035","68":"SUM2033/SUM6086","28":"SUM2032","70":"SUM2030T/2130","15":"SUM2030","40":"SUM2028","14":"SUM2018","84":"D7266","80":"HX6158HNEW","78":"HX6016","10":"LS9739_共阴","67":"RT5958"};</script>
+<script>
+"use strict";
+/* =====================================================================
+   Helpers
+   ===================================================================== */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+/* Every data string goes through esc() before it touches innerHTML. */
+const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const nf = (n) => Number(n).toLocaleString("en-IN");
+const dash = (v) => (v === null || v === undefined || v === "" ? "—" : v);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const params = new URLSearchParams(location.search);
+const PUBLIC = true;
+const RM = window.matchMedia("(prefers-reduced-motion: reduce)");
+const LEVELS = { red: "Don't load", amber: "Check first", info: "Notes", ok: "Looks good" };
+const RANK = { red: 0, amber: 1, info: 2, ok: 3 };
+const pill = (l) => `<span class="pill ${esc(l)}">${esc(LEVELS[l] || l)}</span>`;
+const brandChip = (b) => `<span class="brand-chip ${b === "NovaStar" ? "NovaStar" : b === "Colorlight" ? "Colorlight" : ""}">${esc(b)}</span>`;
+const parseWH = (s) => { const m = String(s || "").match(/(\d+)\s*[x×*]\s*(\d+)/i); return m ? [+m[1], +m[2]] : null; };
+const parseScan = (s) => { const m = String(s || "").match(/1\s*\/\s*(\d+)/); return m ? +m[1] : null; };
+const I = {
+  search: '<svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg>',
+  down: '<svg class="i" viewBox="0 0 24 24"><path d="M12 4v11M7 10.5l5 5 5-5M5 20h14"/></svg>',
+  back: '<svg class="i" viewBox="0 0 24 24"><path d="m14.5 18-6-6 6-6"/></svg>',
+  chev: '<svg class="i chev" viewBox="0 0 24 24"><path d="m9.5 6 6 6-6 6"/></svg>',
+  play: '<svg class="i" viewBox="0 0 24 24" style="fill:currentColor;stroke:none"><path d="M8 5.2v13.6a.8.8 0 0 0 1.2.7l10.6-6.8a.8.8 0 0 0 0-1.4L9.2 4.5A.8.8 0 0 0 8 5.2Z"/></svg>',
+  pause: '<svg class="i" viewBox="0 0 24 24" style="fill:currentColor;stroke:none"><rect x="6.5" y="5" width="4" height="14" rx="1"/><rect x="13.5" y="5" width="4" height="14" rx="1"/></svg>',
+  step: '<svg class="i" viewBox="0 0 24 24" style="fill:currentColor;stroke:none"><path d="M5 5.2v13.6a.8.8 0 0 0 1.2.7l9.3-6.8a.8.8 0 0 0 0-1.4L6.2 4.5A.8.8 0 0 0 5 5.2Z"/><rect x="16.5" y="5" width="3" height="14" rx="1"/></svg>',
+  info: '<svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.6v.1"/></svg>',
+  ok: '<svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8.2 12.3 2.6 2.6 5-5.4"/></svg>',
+  warn: '<svg class="i" viewBox="0 0 24 24"><path d="M10.3 4.2 2.8 17.5A2 2 0 0 0 4.5 20.5h15a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0Z"/><path d="M12 9.5v4.5M12 17.2v.1"/></svg>',
+  stop: '<svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m9 9 6 6M15 9l-6 6"/></svg>',
+  img: '<svg class="i" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="14" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="m20.5 16-4.5-4.5L7 19"/></svg>',
+  moon: '<svg class="i" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z"/></svg>',
+  sun: '<svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6l1.4 1.4M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4"/></svg>',
+  auto: '<svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v17A8.5 8.5 0 0 0 12 3.5Z" style="fill:currentColor"/></svg>',
+};
+const LEVEL_ICON = { ok: I.ok, info: I.info, amber: I.warn, red: I.stop };
+const LEVEL_VAR = { ok: ["var(--ok)", "var(--ok-soft)"], info: ["var(--info)", "var(--info-soft)"], amber: ["var(--warn)", "var(--warn-soft)"], red: ["var(--bad)", "var(--bad-soft)"] };
+
+/* Brand mark: a 5×5 LED dot matrix with a lit "V" */
+(function drawMark() {
+  const lit = new Set(["0,0", "4,0", "0,1", "4,1", "1,2", "3,2", "1,3", "3,3", "2,4"]);
+  let s = '<defs><radialGradient id="mg" cx="50%" cy="40%" r="60%"><stop offset="0" stop-color="#f2d4ff"/><stop offset=".55" stop-color="#c05af0"/><stop offset="1" stop-color="#9D20D6"/></radialGradient></defs>';
+  for (let y = 0; y < 5; y++) for (let x = 0; x < 5; x++) {
+    const on = lit.has(`${x},${y}`);
+    s += `<circle cx="${3 + x * 4.5}" cy="${3 + y * 4.5}" r="${on ? 1.75 : 1.2}" fill="${on ? "url(#mg)" : "rgba(255,255,255,.14)"}"/>`;
+  }
+  $("#mark-svg").innerHTML = s;
+  $(".mark-m").innerHTML = s.replace('id="mg"', 'id="mg2"').replaceAll("url(#mg)", "url(#mg2)");
+})();
+
+/* =====================================================================
+   Theme (System → Dark → Light), per-viewer convenience only
+   ===================================================================== */
+const THEMES = ["system", "dark", "light"];
+function applyTheme(t) {
+  if (t === "system") delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = t;
+  const b = $("#theme-btn");
+  b.innerHTML = t === "light" ? I.sun : t === "dark" ? I.moon : I.auto;
+  b.setAttribute("aria-label", `Theme: ${t}. Click to change.`); b.title = `Theme: ${t}`;
+}
+let theme = params.get("theme") || (() => { try { return localStorage.getItem("vr-theme"); } catch (e) { return null; } })() || "system";
+if (!THEMES.includes(theme)) theme = "system";
+applyTheme(theme);
+$("#theme-btn").addEventListener("click", () => {
+  theme = THEMES[(THEMES.indexOf(theme) + 1) % 3]; applyTheme(theme);
+  try { localStorage.setItem("vr-theme", theme); } catch (e) { /* storage blocked: fine */ }
+});
+
+/* =====================================================================
+   Data: live API when served by the Control Room server, else snapshot
+   ===================================================================== */
+const SNAP = window.VR_SNAPSHOT || { configs: [], firmware: [], ledupgrade: [], sites: [], vendor: { makers: [], rows: [] }, layouts: [] };
+const S = {
+  ready: false, live: false, cfg: [], fw: [], lu: [], sites: null, vendor: null, layouts: {},
+  lib: { src: params.get("src") === "vendor" ? "vendor" : "ours", brand: "", flag: false, q: params.get("q") || "", limit: 200 },
+  st: { q: "", flag: false }, fwq: "", cmp: { a: null, b: null }, cleanup: null,
+};
+SNAP.layouts.forEach((l) => { if (l.layout && l.layout.module_cols) S.layouts[`snap:${l.name}`] = l.layout; });
+
+async function api(url) {
+  const r = await fetch(url, { cache: "no-store" });
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json();
+}
+async function boot() {
+  if (PUBLIC) {
+    S.cfg = []; S.live = false;
+    const dot = $("#src-dot"); if (dot) { dot.textContent = "In your browser"; dot.classList.add("snap"); }
+    S.ready = true;
+    if (!location.hash || !VIEWS[location.hash.slice(1)] && !location.hash.startsWith("#item=")) location.hash = "inspect";
+    route();
+    return;
+  }
+  if (location.protocol.startsWith("http") && !params.has("snapshot")) {
+    try {
+      const r = await api("/api/items");
+      S.cfg = r.items.filter((i) => i.kind === "config"); S.fw = r.items.filter((i) => i.kind === "firmware"); S.live = true;
+    } catch (e) { /* not the Control Room server: fall back */ }
+  }
+  if (!S.live) { S.cfg = SNAP.configs; S.fw = SNAP.firmware; S.lu = SNAP.ledupgrade; S.sites = SNAP.sites; }
+  const dot = $("#src-dot"); dot.textContent = S.live ? "Live · 127.0.0.1" : "Snapshot"; dot.classList.toggle("snap", !S.live);
+  S.ready = true;
+  $("#n-lib").textContent = nf(S.cfg.length); $("#n-fw").textContent = nf(S.fw.length);
+  $("#n-sites").textContent = nf(siteCount());
+  route();
+}
+function siteCount() { return S.sites ? S.sites.length : new Set(S.cfg.flatMap((i) => i.sites || [])).size; }
+async function getSites() { if (!S.sites) { S.sites = await api("/api/sites"); } return S.sites; }
+async function getVendor() {
+  if (S.vendor) return S.vendor;
+  if (S.live) { S.vendor = (await api("/api/vendor")).map((v) => ({ maker: v.maker, name: v.name, spec: v.spec || {} })); }
+  else {
+    const m = SNAP.vendor.makers;
+    S.vendor = SNAP.vendor.rows.map((r) => ({ maker: m[r[0]], name: r[1], spec: { driver_chip: r[2], decoder: r[3], module_px: r[4], scan: r[5], refresh_hz: r[6], brightness_pct: r[7], cabinet_px: r[8] } }));
+  }
+  return S.vendor;
+}
+async function getLayout(item) {
+  const key = `id:${item.id}`;
+  if (S.layouts[key]) return S.layouts[key];
+  if (S.live) {
+    if (item.inspected) return null;   // dropped files bring their layout with them; never borrow another file's
+    try { const L = await api(`/api/layout?id=${encodeURIComponent(item.id)}`); if (L && L.module_cols) { S.layouts[key] = L; return L; } } catch (e) { /* standard model */ }
+    return null;
+  }
+  return S.layouts[`snap:${item.name}`] || null;
+}
+const hay = (o) => JSON.stringify(o).toLowerCase();
+const matchQ = (text, q) => q.split(/\s+/).filter(Boolean).every((t) => text.includes(t));
+
+/* =====================================================================
+   Router
+   ===================================================================== */
+const VIEWS = PUBLIC ? { inspect: viewInspect }
+  : { library: viewLibrary, sites: viewSites, firmware: viewFirmware, compare: viewCompare, inspect: viewInspect };
+const HOME = PUBLIC ? "inspect" : "library";
+let firstRoute = true;
+function route() {
+  if (S.cleanup) { S.cleanup(); S.cleanup = null; }
+  const h = location.hash.slice(1);
+  const main = $("#main");
+  let active = HOME;
+  if (!S.ready) { main.innerHTML = loadingView(); return; }
+  if (h.startsWith("item=")) {
+    let id = ""; try { id = decodeURIComponent(h.slice(5)); } catch (e) { /* bad link */ }
+    active = "library"; viewDetail(id);
+  } else {
+    active = VIEWS[h] ? h : HOME; VIEWS[active]();
+  }
+  $$(".nav a").forEach((a) => { if (a.dataset.view === active) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); });
+  main.classList.remove("enter"); void main.offsetWidth; main.classList.add("enter");
+  if (!firstRoute) { window.scrollTo(0, 0); main.focus({ preventScroll: true }); }
+  firstRoute = false;
+  renderTray();
+}
+window.addEventListener("hashchange", route);
+document.addEventListener("keydown", (e) => {
+  if (e.key === "/" && !/input|textarea|select/i.test(document.activeElement.tagName)) { const q = $("#q"); if (q) { e.preventDefault(); q.focus(); } }
+});
+
+function loadingView() {
+  return `<header class="page-head"><div class="eyebrow"><i></i>Loading</div><h1>Reading the library…</h1>
+    <p class="lede">Collecting configs, sites and firmware from this laptop.</p></header>
+    <div class="table-wrap" aria-busy="true"><div class="skel">${Array.from({ length: 8 }, (_, i) =>
+      `<div><span style="width:14px"></span><span style="width:${28 + (i * 13) % 22}%"></span><span style="width:9%"></span><span style="width:12%"></span><span style="width:8%"></span></div>`).join("")}</div></div>`;
+}
+
+/* =====================================================================
+   Library
+   ===================================================================== */
+function viewLibrary() {
+  const cfg = S.cfg;
+  const cnt = { ok: 0, info: 0, amber: 0, red: 0 }; cfg.forEach((i) => { if (cnt[i.level] !== undefined) cnt[i.level]++; });
+  const nova = cfg.filter((i) => i.brand === "NovaStar").length, cl = cfg.filter((i) => i.brand === "Colorlight").length;
+  const need = cnt.amber + cnt.red, tot = cfg.length || 1;
+  const hasL = (i) => S.live || S.layouts[`snap:${i.name}`];
+  const demo = cfg.find((i) => i.name === "1111.rcfgx" && hasL(i)) || cfg.find(hasL);
+  const vendorN = S.live ? "2,014" : nf(SNAP.vendor.rows.length);
+  $("#main").innerHTML = `
+    <header class="page-head">
+      <div class="eyebrow"><i></i>Library</div>
+      <h1>Every config, checked in plain words</h1>
+      <p class="lede">${nf(cfg.length)} receiving-card configs from ${nf(siteCount())} installed sites, plus Colorlight's ${vendorN} factory configs. Open any file to see its checks and how it lights up.</p>
+    </header>
+    <section class="ov" aria-label="Overview">
+      <div class="card ov-health">
+        <div class="top"><span class="label">Library health</span><span class="big">${nf(need)} need a check</span></div>
+        <div class="stackbar" role="img" aria-label="${cnt.ok} look good, ${cnt.info} with notes, ${cnt.amber} check first, ${cnt.red} don't load">
+          ${["ok", "info", "amber", "red"].filter((l) => cnt[l]).map((l) => `<span class="${l}" style="flex:${cnt[l] / tot}"></span>`).join("")}
+        </div>
+        <ul class="legend">
+          <li style="--c:var(--ok)">Looks good <b>${cnt.ok}</b></li><li style="--c:var(--info)">Notes <b>${cnt.info}</b></li>
+          <li style="--c:var(--warn)">Check first <b>${cnt.amber}</b></li><li style="--c:var(--bad)">Don't load <b>${cnt.red}</b></li>
+        </ul>
+      </div>
+      <div class="card ov-stat"><span class="label">Configs</span><b>${nf(cfg.length)}</b><span class="meta">${nova} NovaStar · ${cl} Colorlight</span></div>
+      <a class="card ov-stat" href="#sites" style="color:inherit;text-decoration:none"><span class="label">Sites</span><b>${nf(siteCount())}</b><span class="meta">installed walls</span></a>
+      <a class="card ov-stat" href="#firmware" style="color:inherit;text-decoration:none"><span class="label">Firmware</span><b>${nf(S.fw.length)}</b><span class="meta">packages on file</span></a>
+    </section>
+    ${demo ? `<div class="callout"><span class="new">New</span><p><b>Light-up Preview.</b> See how a module scans and how a picture looks with a file's own gamma, brightness and gray depth.</p><a class="btn" href="#item=${encodeURIComponent(demo.id)}">Try it on ${esc(demo.name)}</a></div>` : ""}
+    <div class="toolbar" role="search">
+      <label class="search">${I.search}<span class="sr">Search configs</span>
+        <input id="q" type="search" autocomplete="off" spellcheck="false" placeholder="Search name, site, chip, card, pitch… e.g. 3364  P2.5  GKGD" value="${esc(S.lib.q)}"><kbd>/</kbd></label>
+      <div class="seg" role="group" aria-label="Source" id="seg-src">
+        <button type="button" data-v="ours" aria-pressed="${S.lib.src === "ours"}">Our sites<span class="n">${nf(cfg.length)}</span></button>
+        <button type="button" data-v="vendor" aria-pressed="${S.lib.src === "vendor"}">Factory library<span class="n">${vendorN}</span></button>
+      </div>
+      <div class="seg" role="group" aria-label="Brand" id="seg-brand" ${S.lib.src === "vendor" ? "hidden" : ""}>
+        ${[["", "All"], ["NovaStar", "NovaStar"], ["Colorlight", "Colorlight"]].map(([v, t]) => `<button type="button" data-v="${v}" aria-pressed="${S.lib.brand === v}">${t}</button>`).join("")}
+      </div>
+      <label class="switch" id="sw-flag" ${S.lib.src === "vendor" ? "hidden" : ""}><input type="checkbox" id="flag" ${S.lib.flag ? "checked" : ""}><span class="track" aria-hidden="true"></span>Only flagged</label>
+    </div>
+    <div id="lib-out"></div>`;
+  const q = $("#q");
+  if (S.lib.src === "vendor" && !S.vendor) getVendor().then(renderLibResults);
+  q.addEventListener("input", () => { S.lib.q = q.value; S.lib.limit = 200; renderLibResults(); });
+  $$("#seg-src button").forEach((b) => b.addEventListener("click", async () => {
+    S.lib.src = b.dataset.v; S.lib.limit = 200;
+    $$("#seg-src button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+    $("#seg-brand").hidden = $("#sw-flag").hidden = S.lib.src === "vendor";
+    if (S.lib.src === "vendor" && !S.vendor) { $("#lib-out").innerHTML = `<div class="table-wrap" aria-busy="true">${loadingView().split('<div class="table-wrap" aria-busy="true">')[1]}`; await getVendor(); }
+    renderLibResults();
+  }));
+  $$("#seg-brand button").forEach((b) => b.addEventListener("click", () => {
+    S.lib.brand = b.dataset.v; $$("#seg-brand button").forEach((x) => x.setAttribute("aria-pressed", String(x === b))); renderLibResults();
+  }));
+  $("#flag").addEventListener("change", (e) => { S.lib.flag = e.target.checked; renderLibResults(); });
+  renderLibResults();
+}
+
+function emptyState(what, q) {
+  const art = `<svg class="art" viewBox="0 0 92 60" aria-hidden="true">${Array.from({ length: 7 * 11 }, (_, n) => {
+    const x = n % 11, y = Math.floor(n / 11), lit = (y === 3 && x >= 3 && x <= 7);
+    return `<circle cx="${6 + x * 8}" cy="${6 + y * 8}" r="${lit ? 2.4 : 1.6}" fill="${lit ? "#b54ae8" : "currentColor"}" opacity="${lit ? 1 : .18}"/>`;
+  }).join("")}</svg>`;
+  return `<div class="card empty" style="color:var(--text-3)">${art}<h3 style="color:var(--text)">No ${esc(what)} match${q ? ` “${esc(q)}”` : " these filters"}</h3>
+    <p>Try a driver chip (DP3265), a pitch (P2.5), a card (A8s) or part of a site name.</p>
+    <button class="btn" type="button" id="clear">Clear search and filters</button></div>`;
+}
+function wireClear() {
+  const c = $("#clear"); if (!c) return;
+  c.addEventListener("click", () => { S.lib.q = ""; S.lib.brand = ""; S.lib.flag = false; S.st.q = ""; S.st.flag = false; route(); });
+}
+
+function renderLibResults() {
+  const out = $("#lib-out"); if (!out) return;
+  const q = S.lib.q.trim().toLowerCase();
+  if (S.lib.src === "vendor") {
+    const all = S.vendor || [];
+    const rows = all.filter((v) => !q || matchQ(hay(v), q));
+    if (!rows.length) { out.innerHTML = emptyState("factory configs", S.lib.q.trim()); wireClear(); return; }
+    const shown = rows.slice(0, S.lib.limit);
+    out.innerHTML = `<div class="results-meta"><span>${nf(rows.length)} of ${nf(all.length)} Colorlight factory configs, bundled with LEDSetting</span><span class="hide-sm">Reference only</span></div>
+      <div class="table-wrap"><table class="data"><thead><tr><th>Config</th><th>Maker</th><th>Driver</th><th>Decoder</th><th class="num">Module</th><th class="num">Scan</th><th class="num">Refresh</th><th class="num">Bright.</th></tr></thead><tbody>
+      ${shown.map((v) => `<tr class="row-static"><td class="name"><span style="font-weight:600;word-break:break-word">${esc(v.name)}</span>
+          <span class="sub">${esc([v.spec.driver_chip, v.spec.module_px, v.spec.scan].filter(Boolean).join(" · "))}</span><span class="sub s2">${esc(v.maker)}</span></td>
+        <td class="dim">${esc(v.maker)}</td><td class="mono">${esc(dash(v.spec.driver_chip))}</td><td class="mono dim">${esc(dash(v.spec.decoder))}</td>
+        <td class="num">${esc(dash(v.spec.module_px))}</td><td class="num">${esc(dash(v.spec.scan))}</td>
+        <td class="num">${v.spec.refresh_hz ? esc(v.spec.refresh_hz) + " Hz" : "—"}</td><td class="num">${v.spec.brightness_pct != null ? esc(v.spec.brightness_pct) + "%" : "—"}</td></tr>`).join("")}
+      </tbody></table>${rows.length > shown.length ? `<div class="more-row"><button class="btn" type="button" id="more">Show ${nf(Math.min(200, rows.length - shown.length))} more</button></div>` : ""}</div>`;
+    const m = $("#more"); if (m) m.addEventListener("click", () => { S.lib.limit += 200; renderLibResults(); });
+    // reuse the row card layout on phones; factory rows are reference only, not clickable
+    $$(".data tr.row-static", out).forEach((tr) => { tr.classList.add("row"); tr.style.cursor = "default"; });
+    return;
+  }
+  const rows = S.cfg
+    .filter((i) => !S.lib.brand || i.brand === S.lib.brand)
+    .filter((i) => !S.lib.flag || i.level === "amber" || i.level === "red")
+    .filter((i) => !q || matchQ(hay([i.name, i.sites, i.spec]), q))
+    .sort((a, b) => (RANK[a.level] ?? 9) - (RANK[b.level] ?? 9) || a.name.localeCompare(b.name));
+  if (!rows.length) { out.innerHTML = emptyState("configs", S.lib.q.trim()); wireClear(); return; }
+  out.innerHTML = `<div class="results-meta"><span>${nf(rows.length)} config${rows.length === 1 ? "" : "s"}${rows.length !== S.cfg.length ? ` of ${nf(S.cfg.length)}` : ""} · most urgent first</span><span class="hide-sm">Click a row to open</span></div>
+    <div class="table-wrap"><table class="data"><thead><tr><th>Status</th><th>File</th><th>Brand</th><th>Driver chip</th><th class="num">Module</th><th class="num">Pitch</th><th class="num">Scan</th><th class="num hide-lg">Refresh</th><th class="num">Bright.</th><th class="hide-lg">Sites</th></tr></thead><tbody>
+    ${rows.map((i) => {
+      const s = i.spec || {}, br = s.brightness_pct;
+      return `<tr class="row" data-id="${esc(i.id)}"><td class="st">${pill(i.level)}</td>
+        <td class="name"><a href="#item=${encodeURIComponent(i.id)}">${esc(i.name)}</a>
+          <span class="sub">${esc([i.brand, s.driver_chip, s.module_px, s.pitch ? "P" + s.pitch.value : null, s.scan].filter(Boolean).join(" · "))}</span>
+          <span class="sub s2">${esc((i.sites || []).join(", "))}</span></td>
+        <td>${brandChip(i.brand)}</td><td class="mono">${esc(dash(s.driver_chip))}</td>
+        <td class="num">${esc(dash(s.module_px))}</td><td class="num">${s.pitch ? "P" + esc(s.pitch.value) : "—"}</td>
+        <td class="num">${esc(dash(s.scan))}</td><td class="num hide-lg">${s.refresh_hz ? nf(s.refresh_hz) + " Hz" : '<span class="dim">—</span>'}</td>
+        <td class="num">${br != null ? `<span class="bright">${esc(br)}%<span class="meter ${br < 50 ? "low" : ""}"><i style="width:${clamp(+br, 0, 100)}%"></i></span></span>` : "—"}</td>
+        <td class="sites hide-lg">${esc((i.sites || []).join(", "))}</td></tr>`;
+    }).join("")}</tbody></table></div>`;
+  $$("tr.row[data-id]", out).forEach((tr) => tr.addEventListener("click", (e) => { if (e.target.closest("a")) return; location.hash = `item=${encodeURIComponent(tr.dataset.id)}`; }));
+}
+
+/* =====================================================================
+   Detail
+   ===================================================================== */
+const LABELS = {
+  card: "Receiving card", card_program: "Card program", software: "Saved with", driver_chip: "Driver chip", decoder: "Decoder",
+  module_px: "Module pixels", pitch: "Pitch", scan: "Scan", card_load_px: "Card load", cabinet_px: "Cabinet",
+  module_grid: "Module grid", data_groups: "Data groups", refresh_hz: "Refresh", gray_bits: "Gray depth", gray_level: "Gray level",
+  gamma_header: "Gamma (setting)", gamma_table: "Gamma (measured)", brightness_pct: "Brightness", calibration: "Calibration",
+  irregular_cabinet: "Irregular cabinet", rotation: "Rotation", dclk_mhz: "DCLK", gclk_mhz: "GCLK", shadow_removal: "Shadow removal",
+  records: "Card instructions", checksum_ok: "Checksum",
+};
+const GROUPS = [
+  ["Card & software", ["card", "card_program", "software", "records", "rotation"]],
+  ["Module & scan", ["driver_chip", "decoder", "module_px", "pitch", "scan", "data_groups", "module_grid", "card_load_px", "cabinet_px", "irregular_cabinet", "dclk_mhz", "gclk_mhz"]],
+  ["Picture", ["refresh_hz", "gray_bits", "gray_level", "gamma_header", "gamma_table", "brightness_pct", "calibration", "shadow_removal"]],
+  ["File health", ["checksum_ok"]],
+];
+function fmtSpec(k, v, spec) {
+  if (k === "pitch") return v ? `P${esc(v.value)}<small>${esc(v.source)}</small>` : "—";
+  if (k === "checksum_ok") return v === true ? '<span class="ok-txt">OK</span>' : v === false ? '<span class="bad-txt">Failed</span>' : "—";
+  if (v === true) return "On"; if (v === false) return "Off";
+  if (v === null || v === undefined || v === "") return k === "refresh_hz" && spec.refresh_note ? `<small>${esc(spec.refresh_note)}</small>` : '<span class="dim" style="color:var(--text-3)">—</span>';
+  if (k === "refresh_hz") return `${nf(v)} Hz`;
+  if (k === "gray_bits") return `${esc(v)}-bit`;
+  if (k === "brightness_pct") return `<span class="${v < 50 ? "warn-txt" : ""}">${esc(v)}%</span>`;
+  if (k === "dclk_mhz" || k === "gclk_mhz") return `${esc(v)} MHz`;
+  if (k === "gamma_table") return `≈${esc(Number(v).toFixed(1))}`;
+  if (k === "gamma_header") return esc(Number(v).toFixed(1));
+  if (k === "records") return `${esc(v)} steps`;
+  if (k === "gray_level") return nf(v);
+  if (k === "module_px" || k === "card_load_px" || k === "cabinet_px" || k === "module_grid") return esc(String(v).replace("x", " × "));
+  return esc(v);
+}
+const HEADLINE = {
+  ok: ["Looks good", "No problems found in this file."],
+  info: ["Notes", "Nothing blocking. Worth knowing before you load it."],
+  amber: ["Check first", "It loads, but may look wrong on the wall."],
+  red: ["Don't load", "This file is damaged. Don't send it to a card."],
+};
+
+function viewDetail(id) {
+  const i = S.cfg.find((x) => x.id === id);
+  const main = $("#main");
+  if (!i) {
+    main.innerHTML = `<nav class="crumbs"><a href="#inspect">${I.back}Inspect</a></nav>
+      <div class="card empty"><h3>That file isn't in the library</h3><p>The link may be old, or the file was removed from the library.</p><a class="btn" href="#inspect">Back to Inspect</a></div>`;
+    return;
+  }
+  const s = i.spec || {}, lv = i.level || "ok", [c, cs] = LEVEL_VAR[lv] || LEVEL_VAR.ok, f = i.findings || [];
+  const pitch = s.pitch ? `P${esc(s.pitch.value)}` : "—";
+  const bits = s.gray_bits ? `${s.gray_bits}-bit` : s.gray_level >= 256 ? `${Math.round(Math.log2(s.gray_level))}-bit` : "—";
+  const keyTiles = [
+    ["Module", s.module_px ? esc(s.module_px.replace("x", " × ")) : "—", "pixels"],
+    ["Pitch", pitch, s.pitch ? esc(s.pitch.source) : ""],
+    ["Scan", esc(dash(s.scan)), s.data_groups ? `${esc(s.data_groups)} data groups per card` : parseScan(s.scan) ? `${Math.round(100 / parseScan(s.scan) * 10) / 10}% of lines lit at once` : ""],
+    ["Refresh", s.refresh_hz ? `${nf(s.refresh_hz)} Hz` : "—", s.refresh_hz ? "" : "not in file", !s.refresh_hz],
+    ["Gray depth", esc(bits), s.gray_bits ? `${nf(2 ** s.gray_bits)} levels` : s.gray_level ? `gray level ${nf(s.gray_level)}` : ""],
+    ["Brightness", s.brightness_pct != null ? `${esc(s.brightness_pct)}%` : "—", s.brightness_pct != null && s.brightness_pct < 50 ? "runs dim" : "saved in file", s.brightness_pct != null && s.brightness_pct < 50],
+  ];
+  const specCards = GROUPS.map(([title, keys]) => {
+    const ks = keys.filter((k) => k in s); if (!ks.length) return "";
+    return `<section class="card"><h3>${esc(title)}</h3><dl>${ks.map((k) => `<div class="kv"><dt>${esc(LABELS[k] || k)}</dt><dd>${fmtSpec(k, s[k], s)}</dd></div>`).join("")}</dl></section>`;
+  }).join("");
+  const extra = Object.keys(s).filter((k) => !GROUPS.some(([, ks]) => ks.includes(k)) && !["driver_chip_code", "refresh_note"].includes(k));
+  const extraCard = extra.length ? `<section class="card"><h3>Other</h3><dl>${extra.map((k) => `<div class="kv"><dt>${esc(LABELS[k] || k)}</dt><dd>${fmtSpec(k, s[k], s)}</dd></div>`).join("")}</dl></section>` : "";
+
+  main.innerHTML = `
+    <nav class="crumbs" aria-label="Breadcrumb"><a href="#inspect">${I.back}Inspect</a><span aria-hidden="true">/</span><span aria-current="page">${esc(i.name)}</span></nav>
+    <header class="d-head">
+      <div class="d-title">
+        <h1>${esc(i.name)}</h1>
+        <div class="d-meta">${pill(lv)}${brandChip(i.brand)}${s.card ? `<span class="chip">${esc(s.card)}</span>` : ""}${s.driver_chip ? `<span class="chip">${esc(s.driver_chip)}</span>` : ""}
+          ${(i.sites || []).length ? `<span>Used at ${(i.sites || []).map((x) => `<a href="#sites" data-site="${esc(x)}">${esc(x)}</a>`).join(", ")}</span>` : ""}</div>
+      </div>
+      <div class="d-actions">
+        ${PUBLIC ? `<span class="chip">Read in your browser · nothing uploaded</span>`
+          : (i.inspected ? `<span class="chip">Inspected file · not in library</span>` : `<a class="btn" href="/api/file/${encodeURIComponent(i.id)}" download>${I.down}Download</a>`)}
+        ${PUBLIC ? "" : `<button class="btn ${S.cmp.a && S.cmp.a.id === i.id ? "set" : ""}" type="button" data-cmp="a">Compare as A</button>
+        <button class="btn ${S.cmp.b && S.cmp.b.id === i.id ? "set" : ""}" type="button" data-cmp="b">Compare as B</button>`}
+      </div>
+    </header>
+    <section class="verdict" style="--c:${c};--cs:${cs}" aria-label="Checks">
+      <div class="vi">${LEVEL_ICON[lv] || I.ok}</div>
+      <div><h2>${esc(HEADLINE[lv][0])}</h2><p class="vsub">${esc(HEADLINE[lv][1])}${f.length ? ` ${f.length} ${f.length === 1 ? "thing" : "things"} to know.` : ""}</p>
+        ${f.length ? `<ul class="findings">${f.map((x) => `<li>${pill(x.level)}<div><b>${esc(x.title)}</b>${x.detail ? `<p>${esc(x.detail)}</p>` : ""}</div></li>`).join("")}</ul>` : ""}
+      </div>
+    </section>
+    <div class="keys" role="list">${keyTiles.map(([l, v, sm, w]) => `<div role="listitem" class="${w ? "warn" : ""}"><span class="label">${esc(l)}</span><b>${v}</b>${sm ? `<small>${sm}</small>` : ""}</div>`).join("")}</div>
+    <section class="lp" id="lp" aria-labelledby="lp-title"><div class="lp-top"><div><h2 id="lp-title">Light-up Preview</h2><p>Reading the layout…</p></div></div></section>
+    <div class="section-title"><h2>All settings</h2><p>${Object.keys(s).length} fields read from the file</p></div>
+    <div class="specs">${specCards}${extraCard}</div>`;
+  $$("[data-cmp]", main).forEach((b) => b.addEventListener("click", () => setCompare(b.dataset.cmp, i)));
+  $$("[data-site]", main).forEach((a) => a.addEventListener("click", () => { S.st.q = a.dataset.site; }));
+  let dead = false;
+  S.cleanup = () => { dead = true; if (S.lpCleanup) { S.lpCleanup(); S.lpCleanup = null; } };
+  getLayout(i).then((L) => { if (!dead) mountLightUp($("#lp"), i, L); });
+}
+
+/* =====================================================================
+   Light-up Preview — model
+   Everything drawn below comes from the file's layout fields. See notes.
+   ===================================================================== */
+function buildModel(item, L) {
+  const s = item.spec || {};
+  const wh = parseWH(s.module_px) || [64, 32];
+  if (!(wh[1] >= 1)) wh[1] = parseScan(s.scan) || 32;
+  if (!(wh[0] >= 1)) wh[0] = 64;
+  const scanS = Math.max(1, parseScan(s.scan) || wh[1]);
+  const fromFile = !!(L && L.module_cols && L.scan && (L.source === "file" || L.source === undefined));
+  const notes = [];
+  let lay;
+  if (fromFile) {
+    // Coerce every numeric layout field so nothing non-numeric can reach the SVG/HTML strings.
+    const n = (v) => (Number.isFinite(+v) ? +v : 0), arr = (a) => (Array.isArray(a) ? a.map(n) : []);
+    lay = {
+      module_cols: n(L.module_cols), module_rows: n(L.module_rows), scan: Math.max(1, n(L.scan)), data_groups_per_module: n(L.data_groups_per_module) || 1,
+      rows_per_group: arr(L.rows_per_group), group_start_rows: arr(L.group_start_rows), data_direction: String(L.data_direction || "Horizontal"),
+      modules_across: n(L.modules_across), modules_down: n(L.modules_down), cascade: L.cascade ? String(L.cascade) : null,
+      scan_line_order: arr(L.scan_line_order), gamma_table_256: arr(L.gamma_table_256),
+      gray_bits: L.gray_bits != null ? n(L.gray_bits) : null, brightness_0_255: L.brightness_0_255 != null ? n(L.brightness_0_255) : null,
+    };
+  }
+  else {
+    // Standard model: rows split into groups of `scan` rows, lit in order 0,1,2…
+    const n = Math.max(1, Math.round(wh[1] / scanS));
+    lay = {
+      module_cols: wh[0], module_rows: wh[1], scan: scanS, data_groups_per_module: n,
+      rows_per_group: Array.from({ length: n }, (_, k) => Math.min(scanS, wh[1] - k * scanS)),
+      group_start_rows: Array.from({ length: n }, (_, k) => k * scanS),
+      data_direction: "Horizontal", scan_line_order: Array.from({ length: scanS }, (_, k) => k),
+    };
+    notes.push(item.brand === "Colorlight"
+      ? "Colorlight files report module size and scan only, so this uses the standard scan model (rows split into equal groups, lit top to bottom). The detailed layout, firing order and module cascade aren't available from Colorlight files."
+      : "This prototype holds the full layout for three sample files only. Here the standard scan model is built from module size and scan; the live build reads this file's own layout.");
+  }
+
+  /* --- scan geometry. data_direction decides the axis: Horizontal → groups split ROWS, Vertical → groups split COLUMNS. */
+  const vertical = /vert/i.test(lay.data_direction || "");
+  const axisLen = vertical ? lay.module_cols : lay.module_rows;
+  const otherLen = vertical ? lay.module_rows : lay.module_cols;
+  const g = Math.max(1, lay.data_groups_per_module || 1);
+  const starts = (lay.group_start_rows || []).slice(0, g);
+  const lens = (lay.rows_per_group || []).slice(0, g);
+  const scan = lay.scan;
+  const order = Array.isArray(lay.scan_line_order) && lay.scan_line_order.length ? lay.scan_line_order.slice(0, scan) : Array.from({ length: scan }, (_, k) => k);
+  const groups = starts.map((st, k) => ({ start: st, len: lens[k] ?? Math.round(axisLen / g) }));
+  // At step k, line (start + order[k]) lights in every group. When a group is longer than the scan
+  // (e.g. 32 rows at 1/16), the same scan line also drives start + order[k] + scan, + 2·scan…
+  const steps = order.map((o) => {
+    const lines = [];
+    groups.forEach((gr) => { for (let j = 0; o + j * scan < gr.len; j++) { const ln = gr.start + o + j * scan; if (ln < axisLen) lines.push(ln); } });
+    return lines;
+  });
+  const sorted = [...groups].sort((a, b) => a.start - b.start);
+  let contiguous = sorted.length && sorted[0].start === 0; let end = 0;
+  sorted.forEach((gr) => { if (gr.start !== end) contiguous = false; end = gr.start + gr.len; });
+  const covered = contiguous && end === axisLen;
+  const perGroup = Math.max(...groups.map((gr) => Math.ceil(gr.len / scan)));
+
+  /* --- cabinet grid */
+  let across = null, down = null, cascade = null;
+  if (fromFile && lay.modules_across) { across = lay.modules_across; down = lay.modules_down; cascade = lay.cascade || null; }
+  else if (s.module_grid) { const g2 = parseWH(s.module_grid); if (g2) [across, down] = g2; }
+  else if (s.cabinet_px) { const c = parseWH(s.cabinet_px); if (c) { across = Math.round(c[0] / wh[0]); down = Math.round(c[1] / wh[1]); } }
+  const loadPx = parseWH(s.card_load_px || s.cabinet_px) || (across ? [across * wh[0], down * wh[1]] : null);
+
+  /* --- picture: gamma curve, brightness, gray depth */
+  let table = null, gammaSrc, gammaLabel;
+  if (fromFile && Array.isArray(lay.gamma_table_256) && lay.gamma_table_256.length > 1) {
+    table = lay.gamma_table_256; gammaSrc = "file";
+    gammaLabel = `Stored table · ${nf(table.length)} entries${s.gamma_table ? ` · measures ≈${Number(s.gamma_table).toFixed(1)}` : ""}`;
+  } else if (s.gamma_table || s.gamma_header) {
+    const gv = Number(s.gamma_table || s.gamma_header);
+    table = Array.from({ length: 256 }, (_, k) => Math.pow(k / 255, gv)); gammaSrc = "rebuilt";
+    gammaLabel = `Rebuilt from measured gamma ≈${gv.toFixed(1)}`;
+  } else {
+    table = Array.from({ length: 256 }, (_, k) => Math.pow(k / 255, 2.2)); gammaSrc = "assumed";
+    gammaLabel = "Not in this file's summary · 2.2 assumed";
+  }
+  let bright, brightLabel;
+  if (fromFile && lay.brightness_0_255 != null) { bright = lay.brightness_0_255 / 255; brightLabel = `${lay.brightness_0_255}/255 = ${Math.round(bright * 100)}%`; }
+  else if (s.brightness_pct != null) { bright = s.brightness_pct / 100; brightLabel = `${s.brightness_pct}%`; }
+  else { bright = 1; brightLabel = "not in file · 100% assumed"; }
+  let bits = (fromFile && lay.gray_bits) || s.gray_bits || null, bitsLabel;
+  if (bits) bitsLabel = `${bits}-bit`;
+  else if (s.gray_level >= 256) { bits = Math.round(Math.log2(s.gray_level)); bitsLabel = `${bits}-bit (gray level ${nf(s.gray_level)})`; }
+  else { bits = 16; bitsLabel = s.gray_level ? `unclear (file says ${s.gray_level}) · 16-bit assumed` : "not in file · 16-bit assumed"; }
+
+  return {
+    item, fromFile, notes, lay, vertical, axisLen, otherLen, groups, scan, order, steps, covered, perGroup,
+    word: vertical ? "column" : "row", across, down, cascade, modW: lay.module_cols, modH: lay.module_rows, loadPx,
+    table, gammaSrc, gammaLabel, bright, brightLabel, bits, bitsLabel, refresh: s.refresh_hz || null,
+  };
+}
+function curveFn(table) {
+  const n = table.length, max = Math.max(...table) || 1;
+  // Normalise by the table's own length and max (x = i/(len-1), y = v/max): works for 256 or 1,024 entries.
+  return (x) => { const p = clamp(x, 0, 1) * (n - 1), i = Math.floor(p), fr = p - i; const a = table[i], b = table[Math.min(n - 1, i + 1)]; return (a + (b - a) * fr) / max; };
+}
+
+/* =====================================================================
+   Light-up Preview — view
+   ===================================================================== */
+function mountLightUp(root, item, L) {
+  const M = buildModel(item, L);
+  const w = M.word, W = w[0].toUpperCase() + w.slice(1);
+  const lit = M.steps[0] ? M.steps[0].length : 0;
+  const lps = M.refresh ? M.refresh * M.scan : null;
+  const multi = M.perGroup > 1;
+  const cap = `<b>1/${M.scan} scan:</b> ${lit} ${w}${lit === 1 ? "" : "s"} light at a time (${multi ? `${M.perGroup} in each of the ${M.groups.length} data groups, because each group is ${M.groups[0].len} ${w}s and the scan repeats every ${M.scan}` : M.groups.length === 1 ? "one data group" : `one in each of the ${M.groups.length} data groups`}), ${M.scan} steps per frame.
+    ${M.refresh ? `At ${nf(M.refresh)} Hz that's about ${nf(lps)} steps a second, so fast the eye sees a steady picture.` : "This file doesn't state the refresh rate, but at any normal refresh this is far too fast to see, so the eye sees a steady picture."}
+    ${M.vertical ? `<br><br>Data direction is <b>Vertical</b>, so the groups split the module's columns and the scan sweeps <b>columns</b>.` : ""}`;
+  const coverTxt = M.groups.length + " × " + (new Set(M.groups.map((g) => g.len)).size === 1 ? `${M.groups[0].len}` : M.groups.map((g) => g.len).join("+")) + ` ${w}s = ${M.groups.reduce((a, g) => a + g.len, 0)}`;
+  const orderSeq = M.order.every((v, k) => v === k);
+  root.innerHTML = `
+    <div class="lp-top">
+      <div><h2 id="lp-title">Light-up Preview</h2>
+        <p>How a module lights up with this file, drawn from the file's own layout, gamma curve, brightness and gray depth.</p></div>
+      <span class="src-tag ${M.fromFile ? "" : "std"}">${M.fromFile ? "Layout read from file" : "Standard scan model"}</span>
+    </div>
+    <div class="lp-grid">
+      <section class="wide" aria-labelledby="lp-scan-h">
+        <div class="lp-h"><h3 id="lp-scan-h"><span class="step">01</span>Scan, one module</h3><span class="tag">${M.modW} × ${M.modH} px · 1/${M.scan} · ${M.groups.length} group${M.groups.length === 1 ? "" : "s"} · ${esc(M.lay.data_direction || "Horizontal")}</span></div>
+        <div class="scan-body">
+          <div class="led-stage" id="scan-stage"><canvas id="scan-cv" role="img" aria-label="LED module ${M.modW} by ${M.modH}, lit ${w} by ${w} in scan order"></canvas><p class="ds-note" id="scan-ds"></p></div>
+          <div class="scan-side">
+            <p class="caption">${cap}</p>
+            <div class="readout" id="scan-read" aria-live="off"></div>
+            <div class="controls">
+              <div class="ctl-row">
+                <button class="btn primary" type="button" id="sc-play">${I.play}Play</button>
+                <button class="btn" type="button" id="sc-step">${I.step}Step</button>
+              </div>
+              <div class="speed">
+                <label for="sc-speed"><span>Speed</span><output id="sc-out" for="sc-speed"></output></label>
+                <input type="range" id="sc-speed" min="0" max="13" step="1" value="4">
+                <div class="ends"><span>Very slow</span><span>Real speed</span></div>
+              </div>
+              ${RM.matches ? `<p class="rm-note">Reduced motion is on, so the scan waits for you. Use Step, or press Play.</p>` : ""}
+            </div>
+            <div>
+              <div class="order-h"><span>Firing order${M.fromFile ? " stored in the file" : " (standard)"}</span><span>${orderSeq ? "in sequence" : "interleaved"}</span></div>
+              <div class="order" id="sc-order">${M.order.map((v) => `<span>${esc(v)}</span>`).join("")}</div>
+            </div>
+            <p class="check-line ${M.covered ? "ok" : "warn"}">${M.covered ? I.ok : I.warn}<span>${M.covered
+              ? `Groups cover the module exactly: ${esc(coverTxt)} = module ${M.vertical ? "width" : "height"}.`
+              : `Groups don't line up with the module (${esc(coverTxt)} vs ${M.axisLen} ${w}s). Drawn as stored; check the file.`}</span></p>
+          </div>
+        </div>
+      </section>
+
+      <section class="wide" aria-labelledby="lp-pic-h">
+        <div class="lp-h"><h3 id="lp-pic-h"><span class="step">02</span>Picture preview</h3><span class="tag">this file vs reference</span></div>
+        <div class="pic-ctl">
+          <div class="seg" role="group" aria-label="Test pattern" id="pic-seg">
+            <button type="button" data-p="ramp" aria-pressed="true">Gray ramp</button><button type="button" data-p="bars" aria-pressed="false">Colour bars</button><button type="button" data-p="night" aria-pressed="false">Dark scene</button>
+          </div>
+          <span class="btn file-btn">${I.img}Your image<input type="file" id="pic-file" accept="image/*" aria-label="Use your own image (stays on this laptop)"></span>
+          <label class="switch"><input type="checkbox" id="pic-lift"><span class="track" aria-hidden="true"></span>Lift shadows ×8</label>
+        </div>
+        <div class="pics">
+          <figure class="pic"><div class="pic-h"><b class="file">This file</b><span>${esc(item.name.length > 34 ? item.name.slice(0, 32) + "…" : item.name)}</span></div>
+            <div class="led-stage"><canvas id="pic-a" role="img" aria-label="Test pattern rendered with this file's gamma, brightness and gray depth"></canvas></div>
+            <div class="applied"><span class="chip">γ ${esc(M.gammaLabel)}</span><span class="chip">Brightness ${esc(M.brightLabel)}</span><span class="chip">Gray ${esc(M.bitsLabel)} · ${nf(Math.max(2, Math.round(2 ** M.bits * M.bright)))} usable levels</span></div></figure>
+          <figure class="pic"><div class="pic-h"><b>Reference</b><span>γ 2.2 · 100% · 16-bit</span></div>
+            <div class="led-stage"><canvas id="pic-b" role="img" aria-label="Same pattern with reference settings"></canvas></div>
+            <div class="applied"><span class="chip">γ 2.2</span><span class="chip">Brightness 100%</span><span class="chip">Gray 16-bit · ${nf(65536)} levels</span></div></figure>
+        </div>
+        <p class="disclaimer">${I.info}Simulation of this file's settings, not a photometric measurement.</p>
+      </section>
+
+      <section class="cab" aria-labelledby="lp-cab-h">
+        <div class="lp-h"><h3 id="lp-cab-h"><span class="step">03</span>Cabinet map</h3><span class="tag">${M.across ? `${M.across} × ${M.down} modules` : "grid not in file"}</span></div>
+        <div class="cab-wrap">${cabinetSVG(M)}</div>
+        <p class="caption" style="margin-top:12px">${cabCaption(M)}</p>
+      </section>
+
+      <section class="gamma" aria-labelledby="lp-g-h">
+        <div class="lp-h"><h3 id="lp-g-h"><span class="step">04</span>Gamma curve</h3><span class="tag">${esc(M.gammaSrc === "file" ? `${nf(M.table.length)}-entry table` : M.gammaSrc)}</span></div>
+        ${gammaSVG(M)}
+      </section>
+      ${M.notes.length ? `<div class="wide" style="padding-top:16px;padding-bottom:16px"><p class="note">${I.info}<span>${M.notes.map(esc).join(" ")}</span></p></div>` : ""}
+    </div>`;
+
+  const scanSim = new ScanSim(root, M);
+  const picSim = new PicSim(root, M);
+  let t = 0;
+  const ro = new ResizeObserver(() => { clearTimeout(t); t = setTimeout(() => { scanSim.resize(); picSim.render(); }, 80); });
+  ro.observe(root);
+  S.lpCleanup = () => { clearTimeout(t); ro.disconnect(); scanSim.destroy(); };
+}
+
+function cabCaption(M) {
+  if (!M.across) return "The module grid isn't stated in this file.";
+  const load = M.loadPx ? ` = <b>${nf(M.loadPx[0])} × ${nf(M.loadPx[1])} px</b> on one receiving card` : "";
+  const base = `<b>${M.across} × ${M.down}</b> modules of ${M.modW} × ${M.modH} px${load}.`;
+  const cz = parseCascade(M.cascade);
+  if (!M.cascade) return `${base} ${M.fromFile ? "The cascade order isn't stated." : "Data order between modules isn't available here, so no path is drawn."}`;
+  if (!cz) return `${base} Cascade in file: <b>${esc(M.cascade)}</b> (not a pattern this preview can draw).`;
+  return `${base} Cascade from the file: <b>${esc(M.cascade)}</b>, numbered in data order. ${cz.assume}`;
+}
+function parseCascade(c) {
+  if (!c) return null;
+  const t = String(c).match(/Left|Right|Top|Bottom|Up|Down/gi);
+  if (!t || t.length < 2) return null;
+  const a = t[0].toLowerCase(), b = t[1].toLowerCase();
+  const snake = /snake|zig|serp|s-?shape/i.test(c);
+  if ((a === "left" && b === "right") || (a === "right" && b === "left")) return { primary: "h", rev: a === "right", snake, assume: `Each row runs ${a === "right" ? "right → left" : "left → right"}; rows are shown top to bottom${snake ? ", snaking" : ""}.` };
+  const top = a === "top" || a === "up";
+  return { primary: "v", rev: !top, snake, assume: `Each column runs ${top ? "top → bottom" : "bottom → top"}; columns are shown left to right${snake ? ", snaking" : ""}.` };
+}
+function cascadePath(A, D, cz) {
+  const out = [];
+  if (cz.primary === "h") for (let r = 0; r < D; r++) { let cols = [...Array(A).keys()]; if (cz.rev) cols.reverse(); if (cz.snake && r % 2) cols.reverse(); cols.forEach((c) => out.push([c, r])); }
+  else for (let c = 0; c < A; c++) { let rows = [...Array(D).keys()]; if (cz.rev) rows.reverse(); if (cz.snake && c % 2) rows.reverse(); rows.forEach((r) => out.push([c, r])); }
+  return out;
+}
+function cabinetSVG(M) {
+  if (!M.across) return `<p class="caption" style="color:#b6aec4;padding:20px;text-align:center">No module grid in this file.</p>`;
+  const A = M.across, D = M.down, asp = M.modW / M.modH;
+  const VW = 360, maxH = 300, gap = 6, padL = 40, padT = 30, padB = 26, padR = 40;
+  let mw = (VW - padL - padR - gap * (A - 1)) / A, mh = mw / asp;
+  if (mh * D + gap * (D - 1) > maxH) { mh = (maxH - gap * (D - 1)) / D; mw = mh * asp; }
+  const gw = mw * A + gap * (A - 1), gh = mh * D + gap * (D - 1), ox = (VW - gw) / 2, oy = padT;
+  const VH = oy + gh + padB;
+  const cz = parseCascade(M.cascade);
+  const path = cz ? cascadePath(A, D, cz) : null;
+  const idx = {}; if (path) path.forEach(([c, r], k) => { idx[`${c},${r}`] = k + 1; });
+  const fs = clamp(Math.min(mw / 6.5, mh / 2.4), 7, 12);
+  let s = `<svg viewBox="0 0 ${VW} ${VH.toFixed(1)}" role="img" aria-label="Cabinet of ${A} by ${D} modules${M.cascade ? ", data order " + esc(M.cascade) : ""}">
+    <defs><pattern id="ledpat" width="5" height="5" patternUnits="userSpaceOnUse"><rect width="5" height="5" fill="#0d0b12"/><circle cx="2.5" cy="2.5" r="1" fill="#2a2536"/></pattern>
+    <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#b54ae8"/></marker></defs>
+    <text class="dim-t" x="${VW / 2}" y="14" text-anchor="middle">${M.loadPx ? `${nf(M.loadPx[0])} px` : ""}</text>`;
+  const cx = (c) => ox + c * (mw + gap) + mw / 2, cy = (r) => oy + r * (mh + gap) + mh / 2;
+  for (let r = 0; r < D; r++) for (let c = 0; c < A; c++) {
+    const x = ox + c * (mw + gap), y = oy + r * (mh + gap);
+    s += `<rect class="mod" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${mw.toFixed(1)}" height="${mh.toFixed(1)}" rx="3"/>`;
+    if ((path ? mh >= 40 : mh > 16) && mw > 44) s += `<text class="px" x="${(x + mw / 2).toFixed(1)}" y="${(y + mh / 2 + fs * .36 + (path && mh > 40 ? fs * .7 : 0)).toFixed(1)}" text-anchor="middle" style="font-size:${fs.toFixed(1)}px">${M.modW}×${M.modH}</text>`;
+  }
+  if (path) {
+    // flow segments
+    for (let k = 0; k < path.length - 1; k++) {
+      const [c1, r1] = path[k], [c2, r2] = path[k + 1];
+      let x1 = cx(c1), y1 = cy(r1), x2 = cx(c2), y2 = cy(r2);
+      const dx = x2 - x1, dy = y2 - y1, d = Math.hypot(dx, dy) || 1, sh = Math.min(13, d * .28);
+      x1 += dx / d * sh; y1 += dy / d * sh; x2 -= dx / d * sh; y2 -= dy / d * sh;
+      const jump = r1 !== r2 && c1 !== c2;
+      s += `<path class="flow" d="M${x1.toFixed(1)} ${y1.toFixed(1)} L${x2.toFixed(1)} ${y2.toFixed(1)}" marker-end="url(#arr)" ${jump ? 'stroke-dasharray="3 3" opacity=".7"' : ""}/>`;
+    }
+    // entry arrow
+    const [c0, r0] = path[0];
+    const horiz = cz.primary === "h";
+    let ex, ey, tx, ty, anchor = "middle";
+    if (horiz) { const fromRight = cz.rev; ex = fromRight ? ox + gw + 30 : ox - 30; ey = cy(r0); tx = fromRight ? ox + gw + 30 : ox - 30; ty = ey - 8; anchor = fromRight ? "end" : "start"; }
+    else { const fromBottom = cz.rev; ex = cx(c0); ey = fromBottom ? oy + gh + 22 : oy - 22; tx = ex + 8; ty = fromBottom ? oy + gh + 20 : oy - 14; anchor = "start"; }
+    const endX = horiz ? (cz.rev ? ox + gw - 3 : ox + 3) : ex, endY = horiz ? ey : (cz.rev ? oy + gh - 3 : oy + 3);
+    s += `<path class="flow" d="M${ex.toFixed(1)} ${ey.toFixed(1)} L${endX.toFixed(1)} ${endY.toFixed(1)}" marker-end="url(#arr)"/>`;
+    s += `<text class="in-t" x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" text-anchor="${anchor}">IN</text>`;
+    const br = clamp(Math.min(mw, mh) * .22, 5.5, 9);
+    path.forEach(([c, r], k) => {
+      const bx = cx(c), by = mh > 40 ? cy(r) - fs * .55 : cy(r);
+      s += `<circle class="badge" cx="${bx.toFixed(1)}" cy="${by.toFixed(1)}" r="${br.toFixed(1)}"/><text class="badge-t" x="${bx.toFixed(1)}" y="${(by + br * .38).toFixed(1)}" text-anchor="middle" style="font-size:${(br * 1.05).toFixed(1)}px">${k + 1}</text>`;
+    });
+  }
+  s += `<text class="dim-t" x="${VW / 2}" y="${(oy + gh + 18).toFixed(1)}" text-anchor="middle">${M.loadPx ? `${A} × ${D} modules · ${nf(M.loadPx[1])} px tall` : `${A} × ${D} modules`}${(path ? mh < 40 : mh <= 16) || mw <= 44 ? ` · each ${M.modW}×${M.modH}` : ""}</text></svg>`;
+  return s;
+}
+function gammaSVG(M) {
+  const fn = curveFn(M.table), ref = (x) => Math.pow(x, 2.2);
+  const X0 = 46, X1 = 348, Y0 = 18, Y1 = 208, VW = 360, VH = 250;
+  const px = (x) => X0 + x * (X1 - X0), py = (y) => Y1 - y * (Y1 - Y0);
+  const N = 128; let pf = "", pr = "";
+  for (let k = 0; k <= N; k++) { const x = k / N; pf += `${k ? "L" : "M"}${px(x).toFixed(1)} ${py(fn(x)).toFixed(1)}`; pr += `${k ? "L" : "M"}${px(x).toFixed(1)} ${py(ref(x)).toFixed(1)}`; }
+  let grid = "";
+  [0, .25, .5, .75, 1].forEach((v) => { grid += `<line class="grid" x1="${X0}" x2="${X1}" y1="${py(v)}" y2="${py(v)}"/><text x="${X0 - 8}" y="${py(v) + 3.5}" text-anchor="end">${v * 100}%</text>`; });
+  [0, 64, 128, 192, 255].forEach((v) => { grid += `<line class="grid" y1="${Y0}" y2="${Y1}" x1="${px(v / 255)}" x2="${px(v / 255)}"/><text x="${px(v / 255)}" y="${Y1 + 15}" text-anchor="middle">${v}</text>`; });
+  const half = 128 / 255, fh = fn(half), rh = ref(half);
+  const lblY = (y) => clamp(py(y), Y0 + 10, Y1 - 4);
+  const fx = .62, fy = fn(fx), ry = ref(fx);
+  const fileAbove = fy > ry;
+  return `<svg viewBox="0 0 ${VW} ${VH}" role="img" aria-label="Gamma curve of this file against a 2.2 reference. At half input the file gives ${Math.round(fh * 100)} percent light, the reference ${Math.round(rh * 100)} percent.">
+    ${grid}<line class="ax" x1="${X0}" x2="${X1}" y1="${Y1}" y2="${Y1}"/><line class="ax" x1="${X0}" x2="${X0}" y1="${Y0}" y2="${Y1}"/>
+    <path class="ref" d="${pr}"/><path class="file ${M.gammaSrc !== "file" ? "rebuilt" : ""}" d="${pf}"/>
+    <line class="grid" x1="${px(half)}" x2="${px(half)}" y1="${py(Math.max(fh, rh))}" y2="${Y1}" style="stroke:var(--line-3);stroke-dasharray:2 3"/>
+    <circle class="mk-ref" cx="${px(half)}" cy="${py(rh)}" r="3.5"/><circle class="mk-file" cx="${px(half)}" cy="${py(fh)}" r="4"/>
+    ${Math.abs(fy - ry) < .025 ? `<text class="lbl-file" x="${px(fx) - 6}" y="${lblY(fy) - 8}" text-anchor="end">Same as reference</text>` : `<text class="lbl-file" x="${px(fx) + (fileAbove ? -6 : 6)}" y="${lblY(fy) + (fileAbove ? -8 : 14)}" text-anchor="${fileAbove ? "end" : "start"}">This file</text>
+    <text class="lbl-ref" x="${px(fx) + (fileAbove ? 6 : -6)}" y="${lblY(ry) + (fileAbove ? 14 : -8)}" text-anchor="${fileAbove ? "start" : "end"}">2.2 reference</text>`}
+    <text class="t-axis" x="${(X0 + X1) / 2}" y="${VH - 4}" text-anchor="middle">Input level (0–255)</text>
+    <text class="t-axis" transform="translate(11 ${(Y0 + Y1) / 2}) rotate(-90)" text-anchor="middle">Light output (% of full)</text>
+  </svg>
+  <div class="g-legend"><span><i></i>This file · ${esc(M.gammaLabel)}</span><span><i class="r"></i>Reference γ 2.2</span></div>
+  <p class="caption">At half input (128) this file gives <b>${Math.round(fh * 100)}%</b> light, the reference <b>${Math.round(rh * 100)}%</b>. ${
+    fh > rh * 1.6 ? "A curve this high lifts the darks, so pictures look washed out." : fh < rh * .75 ? "A curve this low deepens the darks; fine detail in shadows can get crushed." : "Close to the reference, so mid-tones should look natural."}${M.gammaSrc === "file" ? " Normalised by the table's own length and top value." : ""}</p>`;
+}
+
+/* ---------------- Scan animation ---------------- */
+const SPEEDS = [0.5, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 4096, Infinity];
+class ScanSim {
+  constructor(root, M) {
+    this.M = M; this.root = root; this.cv = $("#scan-cv", root); this.ctx = this.cv.getContext("2d");
+    this.inten = new Float32Array(M.axisLen); this.k = 0; this.acc = 0; this.last = 0; this.raf = 0; this.idx = 4; this.readT = 0;
+    this.orderCells = $$("#sc-order span", root);
+    this.playing = false;
+    this.light(0, true);
+    this.resize();
+    const sp = $("#sc-speed", root);
+    sp.addEventListener("input", () => this.setSpeed(+sp.value));
+    $("#sc-play", root).addEventListener("click", () => (this.playing ? this.pause() : this.play()));
+    $("#sc-step", root).addEventListener("click", () => this.step());
+    this.onVis = () => { if (document.hidden) this.stopLoop(); else if (this.playing) this.loop(); };
+    document.addEventListener("visibilitychange", this.onVis);
+    this.setSpeed(this.idx);
+    if (!RM.matches) this.play(); else this.updateUI();
+  }
+  destroy() { this.stopLoop(); document.removeEventListener("visibilitychange", this.onVis); }
+  resize() {
+    const M = this.M, stage = $("#scan-stage", this.root); if (!stage) return;
+    const cs = getComputedStyle(stage);
+    const avail = Math.max(120, stage.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight));
+    const GUT = 30, maxH = 380;
+    let cell, nOther;
+    if (!M.vertical) {
+      // lines = rows, all drawn; columns may be downsampled
+      cell = clamp(Math.min(Math.floor(maxH / M.axisLen), 10), 2, 10);
+      cell = Math.max(2, Math.min(cell, Math.floor((avail - GUT) / Math.min(M.otherLen, 48)) || 2));
+      nOther = Math.min(M.otherLen, Math.floor((avail - GUT) / cell));
+      this.W = GUT + nOther * cell; this.H = M.axisLen * cell;
+    } else {
+      // lines = columns, all drawn; rows may be downsampled
+      cell = clamp(Math.floor((avail) / M.axisLen), 2, 10);
+      nOther = Math.min(M.otherLen, Math.floor(maxH / cell));
+      this.W = M.axisLen * cell; this.H = GUT + nOther * cell;
+    }
+    this.cell = cell; this.nOther = nOther; this.GUT = GUT;
+    this.otherIdx = Array.from({ length: nOther }, (_, j) => Math.floor(j * M.otherLen / nOther));
+    const dpr = Math.min(2, window.devicePixelRatio || 1); this.dpr = dpr;
+    this.cv.width = Math.round(this.W * dpr); this.cv.height = Math.round(this.H * dpr);
+    this.cv.style.width = this.W + "px";
+    const ds = $("#scan-ds", this.root);
+    if (ds) ds.textContent = nOther < M.otherLen ? `Every ${M.word} drawn (${M.axisLen}); ${nOther} of ${M.otherLen} ${M.vertical ? "rows" : "columns"} shown to fit.` : `Dot for dot: all ${M.modW} × ${M.modH} LEDs drawn.`;
+    this.buildLayers(); this.draw();
+  }
+  mk(w, h) { const c = document.createElement("canvas"); c.width = Math.round(w * this.dpr); c.height = Math.round(h * this.dpr); const x = c.getContext("2d"); x.scale(this.dpr, this.dpr); return [c, x]; }
+  dots(x, lineCount, color, isSprite) {
+    const { cell, nOther, M } = this, r = cell >= 4 ? cell * .36 : 0;
+    x.fillStyle = color;
+    for (let a = 0; a < lineCount; a++) for (let b = 0; b < nOther; b++) {
+      const lx = M.vertical ? a * cell : this.GUT * !isSprite + b * cell, ly = M.vertical ? this.GUT * !isSprite + b * cell : a * cell;
+      if (r) { x.beginPath(); x.arc(lx + cell / 2, ly + cell / 2, r, 0, 6.2832); x.fill(); } else x.fillRect(lx, ly, cell - (cell > 2 ? 1 : 0.6), cell - (cell > 2 ? 1 : 0.6));
+    }
+  }
+  buildLayers() {
+    const M = this.M, cell = this.cell;
+    const [b, bx] = this.mk(this.W, this.H); this.base = b;
+    this.dots(bx, M.axisLen, "#1d1a26", false);
+    // group brackets in the gutter
+    bx.strokeStyle = "rgba(200,160,240,.55)"; bx.fillStyle = "rgba(220,200,240,.8)"; bx.lineWidth = 1; bx.font = "600 9.5px Segoe UI, system-ui, sans-serif";
+    M.groups.forEach((g, k) => {
+      const a0 = g.start * cell + 1.5, a1 = Math.min(M.axisLen, g.start + g.len) * cell - 1.5;
+      bx.beginPath();
+      if (!M.vertical) { bx.moveTo(this.GUT - 6, a0); bx.lineTo(this.GUT - 10, a0); bx.lineTo(this.GUT - 10, a1); bx.lineTo(this.GUT - 6, a1); }
+      else { bx.moveTo(a0, this.GUT - 6); bx.lineTo(a0, this.GUT - 10); bx.lineTo(a1, this.GUT - 10); bx.lineTo(a1, this.GUT - 6); }
+      bx.stroke();
+      if ((a1 - a0) > 18) {
+        bx.textAlign = "center";
+        if (!M.vertical) { bx.save(); bx.translate(this.GUT - 19, (a0 + a1) / 2); bx.rotate(-Math.PI / 2); bx.fillText(`G${k + 1}`, 0, 3); bx.restore(); }
+        else bx.fillText(`G${k + 1}`, (a0 + a1) / 2, this.GUT - 15);
+      }
+    });
+    // one lit line sprite (warm white LED + soft bloom)
+    const len = this.nOther * cell;
+    const [sp, sx] = M.vertical ? this.mk(cell, len) : this.mk(len, cell);
+    sx.fillStyle = "rgba(255,236,250,.16)"; sx.fillRect(0, 0, M.vertical ? cell : len, M.vertical ? len : cell);
+    const save = this.GUT; this.GUT = 0; this.dots(sx, 1, "#fff7f0", true); this.GUT = save;
+    this.sprite = sp;
+  }
+  draw() {
+    const x = this.ctx, M = this.M, cell = this.cell;
+    x.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    x.clearRect(0, 0, this.W, this.H);
+    x.drawImage(this.base, 0, 0, this.W, this.H);
+    const sw = M.vertical ? cell : this.nOther * cell, sh = M.vertical ? this.nOther * cell : cell;
+    for (let l = 0; l < M.axisLen; l++) {
+      const v = this.inten[l]; if (v < .02) continue;
+      x.globalAlpha = Math.min(1, v);
+      if (M.vertical) x.drawImage(this.sprite, l * cell, this.GUT, sw, sh); else x.drawImage(this.sprite, this.GUT, l * cell, sw, sh);
+    }
+    x.globalAlpha = 1;
+    if (!this.steady) { // pointer ticks for the current step
+      x.fillStyle = "#c86bf5";
+      (M.steps[this.k] || []).forEach((l) => {
+        x.beginPath();
+        if (!M.vertical) { const y = l * cell + cell / 2; x.moveTo(this.GUT - 1, y); x.lineTo(this.GUT - 6, y - 3.5); x.lineTo(this.GUT - 6, y + 3.5); }
+        else { const xx = l * cell + cell / 2; x.moveTo(xx, this.GUT - 1); x.lineTo(xx - 3.5, this.GUT - 6); x.lineTo(xx + 3.5, this.GUT - 6); }
+        x.fill();
+      });
+    }
+  }
+  light(k, clear) { if (clear) this.inten.fill(0); this.k = k; (this.M.steps[k] || []).forEach((l) => { this.inten[l] = 1; }); }
+  setSpeed(i) {
+    this.idx = i; const v = SPEEDS[i], sp = $("#sc-speed", this.root);
+    sp.style.setProperty("--p", `${(i / 13) * 100}%`);
+    const M = this.M;
+    $("#sc-out", this.root).textContent = v === Infinity ? (M.refresh ? `Real · ${nf(M.refresh * M.scan)}/s` : "Real speed") : `${v} step${v === 1 ? "" : "s"}/s`;
+    sp.setAttribute("aria-valuetext", v === Infinity ? "Real speed" : `${v} steps per second`);
+    if (v === Infinity) { this.goSteady(); }
+    else if (this.steady) { this.steady = false; this.light(this.k, true); this.draw(); if (this.playing) this.loop(); }
+    this.updateUI();
+  }
+  goSteady() {
+    this.steady = true; this.stopLoop();
+    this.inten.fill(0); this.M.steps.forEach((ls) => ls.forEach((l) => { this.inten[l] = 1; }));
+    this.draw(); this.updateUI();
+  }
+  play() {
+    this.playing = true;
+    if (SPEEDS[this.idx] === Infinity) { this.goSteady(); } else this.loop();
+    this.updateUI();
+  }
+  pause() { this.playing = false; this.stopLoop(); this.updateUI(); }
+  step() {
+    if (this.playing) this.pause();
+    if (this.steady) { this.steady = false; this.idx = 11; $("#sc-speed", this.root).value = 11; this.setSpeed(11); }
+    this.light((this.k + 1) % this.M.scan, true); this.draw(); this.updateUI(true);
+  }
+  loop() { if (!this.raf) { this.last = performance.now(); this.raf = requestAnimationFrame((t) => this.tick(t)); } }
+  stopLoop() { if (this.raf) cancelAnimationFrame(this.raf); this.raf = 0; }
+  tick(t) {
+    this.raf = 0; if (!this.playing || this.steady) return;
+    const dt = Math.min(.1, (t - this.last) / 1000); this.last = t;
+    const sp = SPEEDS[this.idx], M = this.M;
+    const tau = RM.matches ? .001 : sp <= 4 ? .22 : .14;
+    const f = Math.exp(-dt / tau); for (let l = 0; l < this.inten.length; l++) this.inten[l] *= f;
+    this.acc += dt * sp; let n = Math.floor(this.acc); this.acc -= n;
+    if (n >= M.scan) { this.k = (this.k + n) % M.scan; M.steps.forEach((ls) => ls.forEach((l) => { this.inten[l] = Math.max(this.inten[l], .9); })); }
+    else while (n-- > 0) this.light((this.k + 1) % M.scan, false);
+    this.draw();
+    if (t - this.readT > 90) { this.readT = t; this.updateUI(); }
+    this.raf = requestAnimationFrame((tt) => this.tick(tt));
+  }
+  updateUI(announce) {
+    const M = this.M, r = $("#scan-read", this.root); if (!r) return;
+    const pb = $("#sc-play", this.root);
+    pb.innerHTML = this.playing ? `${I.pause}Pause` : `${I.play}Play`;
+    pb.setAttribute("aria-pressed", String(this.playing));
+    r.setAttribute("aria-live", this.playing ? "off" : "polite");
+    if (this.steady) {
+      r.innerHTML = `<span>Real speed.</span> Every ${M.word} fires ${M.refresh ? `${nf(M.refresh)} times a second` : "thousands of times a second"}. Too fast to follow, so the module looks evenly lit.`;
+      this.orderCells.forEach((c) => c.classList.remove("on"));
+      return;
+    }
+    const ls = M.steps[this.k] || [];
+    const list = ls.length > 8 ? ls.slice(0, 8).join(", ") + ", …" : ls.join(", ");
+    r.innerHTML = `<span>Step</span> ${this.k + 1} <span>of</span> ${M.scan}<span> · scan line</span> ${esc(M.order[this.k])}<br><span>Lit ${M.word}s:</span> ${esc(list || "none")}${ls.length ? ` <span>(${ls.length})</span>` : ""}`;
+    if (this.onCell) this.onCell.classList.remove("on");
+    this.onCell = this.orderCells[this.k]; if (this.onCell) this.onCell.classList.add("on");
+  }
+}
+
+/* ---------------- Picture preview ---------------- */
+class PicSim {
+  constructor(root, M) {
+    this.root = root; this.M = M; this.pattern = "ramp"; this.lift = false; this.img = null;
+    const fileFn = curveFn(M.table);
+    this.lutA = (lift) => this.lut((x) => fileFn(x), M.bright, M.bits, lift);
+    this.lutB = (lift) => this.lut((x) => Math.pow(x, 2.2), 1, 16, lift);
+    $$("#pic-seg button", root).forEach((b) => b.addEventListener("click", () => {
+      this.pattern = b.dataset.p; $$("#pic-seg button", root).forEach((x) => x.setAttribute("aria-pressed", String(x === b))); this.render();
+    }));
+    $("#pic-lift", root).addEventListener("change", (e) => { this.lift = e.target.checked; this.render(); });
+    $("#pic-file", root).addEventListener("change", (e) => this.loadImage(e.target.files[0]));
+    this.render();
+  }
+  /* input 0–255 → LED linear light (curve × brightness, quantised to gray depth) → display value (encode with 1/2.2) */
+  lut(curve, bright, bits, lift) {
+    const out = new Uint8ClampedArray(256), levels = Math.pow(2, bits) - 1, k = lift ? 8 : 1;
+    for (let v = 0; v < 256; v++) {
+      const L = curve(v / 255) * bright;
+      const q = Math.round(L * levels) / levels;
+      out[v] = Math.round(255 * Math.pow(clamp(q * k, 0, 1), 1 / 2.2));
+    }
+    return out;
+  }
+  loadImage(file) {
+    if (!file || !/^image\//.test(file.type)) return;
+    const url = URL.createObjectURL(file), im = new Image();
+    im.onload = () => {
+      this.img = im; URL.revokeObjectURL(url); this.pattern = "image";
+      const seg = $("#pic-seg", this.root);
+      if (!$('[data-p="image"]', seg)) seg.insertAdjacentHTML("beforeend", `<button type="button" data-p="image" aria-pressed="true">Your image</button>`);
+      $$("button", seg).forEach((x) => x.setAttribute("aria-pressed", String(x.dataset.p === "image")));
+      $('[data-p="image"]', seg).onclick = () => { this.pattern = "image"; $$("button", seg).forEach((x) => x.setAttribute("aria-pressed", String(x.dataset.p === "image"))); this.render(); };
+      this.render(); toast("Image loaded. It stays on this laptop.");
+    };
+    im.onerror = () => { URL.revokeObjectURL(url); toast("Couldn't read that image."); };
+    im.src = url;
+  }
+  source(cols, rows) {
+    const px = new Uint8ClampedArray(cols * rows * 3);
+    const set = (x, y, r, g, b) => { const o = (y * cols + x) * 3; px[o] = r; px[o + 1] = g; px[o + 2] = b; };
+    const p = this.pattern;
+    if (p === "image" && this.img) {
+      const c = document.createElement("canvas"); c.width = cols; c.height = rows; const x = c.getContext("2d");
+      const im = this.img, s = Math.max(cols / im.width, rows / im.height), w = im.width * s, h = im.height * s;
+      x.imageSmoothingQuality = "high"; x.drawImage(im, (cols - w) / 2, (rows - h) / 2, w, h);
+      const d = x.getImageData(0, 0, cols, rows).data;
+      for (let i = 0; i < cols * rows; i++) { px[i * 3] = d[i * 4]; px[i * 3 + 1] = d[i * 4 + 1]; px[i * 3 + 2] = d[i * 4 + 2]; }
+      return px;
+    }
+    for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
+      const u = x / (cols - 1), v = y / (rows - 1);
+      if (p === "ramp") {
+        let g;
+        if (v < .44) g = Math.round(u * 255);
+        else if (v < .52) g = 0;
+        else g = Math.min(255, Math.floor(x / cols * 16) * 17);
+        set(x, y, g, g, g);
+      } else if (p === "bars") {
+        if (v < .64) {
+          const b = Math.min(6, Math.floor(u * 7)), C = [[255, 255, 255], [255, 255, 0], [0, 255, 255], [0, 255, 0], [255, 0, 255], [255, 0, 0], [0, 0, 255]][b];
+          set(x, y, C[0], C[1], C[2]);
+        } else if (v < .72) { set(x, y, 0, 0, 0); }
+        else if (u < .6) { const g = Math.round(u / .6 * 255); set(x, y, g, g, g); }
+        else { const n = Math.min(3, Math.floor((u - .6) / .4 * 4)), g = [0, 8, 16, 32][n]; set(x, y, g, g, g); }
+      } else { // night scene: lots of low values
+        const sky = 1 - v;
+        let r = 4 + 22 * (1 - sky) ** 1.6, g = 3 + 16 * (1 - sky) ** 1.6, b = 12 + 34 * (1 - sky) ** 1.3;
+        const mx = u - .78, my = (v - .24) * rows / cols * 1.0, md = Math.hypot(mx, my * (cols / rows) * (rows / cols));
+        const dm = Math.hypot((u - .78) * cols, (v - .24) * rows) / cols;
+        if (dm < .055) { r = 236; g = 230; b = 208; } else if (dm < .13) { const k = (1 - (dm - .055) / .075) ** 2; r += 40 * k; g += 38 * k; b += 44 * k; }
+        // skyline
+        const bx = Math.floor(u * 13), hgt = .52 + .3 * ((Math.sin(bx * 12.9898) * 43758.5453) % 1 + 1) % 1 * .6;
+        if (v > hgt) {
+          r = 9; g = 8; b = 13;
+          const wx = Math.floor(u * cols) % 3, wy = Math.floor(v * rows) % 3, seed = Math.abs(Math.sin((Math.floor(u * cols / 3) * 91.3 + Math.floor(v * rows / 3) * 47.7)) * 1e4) % 1;
+          if (wx === 1 && wy === 1 && seed > .55) { const w = 30 + seed * 90; r = w; g = w * .72; b = w * .38; }
+        }
+        if (v > .94) { r = 6 + 20 * u; g = 5 + 8 * u; b = 10; }
+        set(x, y, r | 0, g | 0, b | 0);
+      }
+    }
+    return px;
+  }
+  render() {
+    const a = $("#pic-a", this.root), b = $("#pic-b", this.root); if (!a || !b) return;
+    const stage = a.parentElement, cs = getComputedStyle(stage);
+    const avail = Math.max(160, stage.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight));
+    const cols = avail >= 420 ? 96 : 64, rows = Math.round(cols * 9 / 16);
+    const cell = Math.max(3, Math.floor(avail / cols * 4) / 4);
+    const src = this.source(cols, rows);
+    this.paint(a, src, cols, rows, cell, this.lutA(this.lift));
+    this.paint(b, src, cols, rows, cell, this.lutB(this.lift));
+  }
+  paint(cv, src, cols, rows, cell, lut) {
+    const dpr = Math.min(2, window.devicePixelRatio || 1), W = cols * cell, H = rows * cell;
+    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); cv.style.width = W + "px";
+    const x = cv.getContext("2d"); x.setTransform(dpr, 0, 0, dpr, 0, 0);
+    x.fillStyle = "#050407"; x.fillRect(0, 0, W, H);
+    const r = cell * .43;
+    for (let y = 0; y < rows; y++) for (let c = 0; c < cols; c++) {
+      const o = (y * cols + c) * 3, R = lut[src[o]], G = lut[src[o + 1]], B = lut[src[o + 2]];
+      // unlit LEDs still read as faint dots
+      x.fillStyle = (R + G + B) < 9 ? "#121019" : `rgb(${R},${G},${B})`;
+      x.beginPath(); x.arc(c * cell + cell / 2, y * cell + cell / 2, r, 0, 6.2832); x.fill();
+    }
+  }
+}
+
+/* =====================================================================
+   Compare
+   ===================================================================== */
+function setCompare(slot, item) {
+  S.cmp[slot] = { id: item.id, name: item.name };
+  toast(`Set ${item.name} as ${slot.toUpperCase()}`);
+  $$("[data-cmp]").forEach((b) => b.classList.toggle("set", !!(S.cmp[b.dataset.cmp] && S.cmp[b.dataset.cmp].id === item.id)));
+  if (S.cmp.a && S.cmp.b) location.hash = "compare"; else renderTray();
+}
+function renderTray() {
+  const t = $("#tray"), onCmp = location.hash === "#compare";
+  if ((!S.cmp.a && !S.cmp.b) || onCmp) { t.hidden = true; return; }
+  t.hidden = false;
+  t.innerHTML = ["a", "b"].map((k) => `<span class="slot"><b>${k.toUpperCase()}</b><span>${S.cmp[k] ? esc(S.cmp[k].name) : "pick a file"}</span></span>`).join("")
+    + `<a class="btn primary" href="#compare" style="height:32px">Compare</a>`;
+}
+function viewCompare() {
+  const opts = S.cfg.map((o) => `<option value="${esc(o.name)}  [${esc(o.id)}]">`).join("");
+  const val = (k) => (S.cmp[k] ? `${esc(S.cmp[k].name)}  [${esc(S.cmp[k].id)}]` : "");
+  $("#main").innerHTML = `
+    <header class="page-head"><div class="eyebrow"><i></i>Compare</div><h1>Two files, only the differences</h1>
+      <p class="lede">Pick two configs of the same brand. Tip: open any file and use Compare as A / B.</p></header>
+    <div class="cmp-slots">
+      <div class="card cmp-slot"><label for="ca">FILE A</label><input id="ca" list="cl" placeholder="Type to search…" value="${val("a")}"></div>
+      <div class="card cmp-slot"><label for="cb">FILE B</label><input id="cb" list="cl" placeholder="Type to search…" value="${val("b")}"></div>
+      <datalist id="cl">${opts}</datalist>
+    </div>
+    <div id="cmp-out"></div>`;
+  const idOf = (v) => (v.match(/\[([^\]]+)\]\s*$/) || [])[1];
+  const run = () => {
+    const a = S.cfg.find((x) => x.id === idOf($("#ca").value)), b = S.cfg.find((x) => x.id === idOf($("#cb").value)), out = $("#cmp-out");
+    if (a) S.cmp.a = { id: a.id, name: a.name }; if (b) S.cmp.b = { id: b.id, name: b.name };
+    if (!a || !b) { out.innerHTML = `<div class="card empty"><h3>Pick both files</h3><p>Start typing a file name, site or chip in A and B.</p></div>`; return; }
+    if (S.live) { runLive(a, b, out); return; }
+    const keys = [...new Set([...Object.keys(a.spec || {}), ...Object.keys(b.spec || {})])].filter((k) => k !== "driver_chip_code");
+    const sv = (i, k) => { const v = (i.spec || {})[k]; return v && typeof v === "object" ? `P${v.value}` : v; };
+    const diff = keys.filter((k) => JSON.stringify(sv(a, k)) !== JSON.stringify(sv(b, k)));
+    out.innerHTML = `${a.brand !== b.brand ? `<div class="banner">${I.warn}<span>These are different brands, so most settings won't line up.</span></div>` : ""}
+      <div class="results-meta"><span><b style="color:var(--text)">${diff.length}</b> of ${keys.length} summary settings differ${S.live ? "" : " · prototype compares the spec summary; the live build compares every field"}</span></div>
+      ${diff.length ? `<div class="table-wrap"><table class="data"><thead><tr><th>Setting</th><th>A · ${esc(a.name)}</th><th>B · ${esc(b.name)}</th></tr></thead><tbody>
+      ${diff.map((k) => `<tr><td>${esc(LABELS[k] || k)}</td><td class="mono diff-a">${esc(dash(sv(a, k)))}</td><td class="mono diff-b">${esc(dash(sv(b, k)))}</td></tr>`).join("")}</tbody></table></div>`
+      : `<div class="card empty"><h3>No differences in the summary</h3><p>These two files share every summarised setting.</p></div>`}`;
+  };
+  $("#ca").addEventListener("change", run); $("#cb").addEventListener("change", run);
+  run();
+}
+async function runLive(a, b, out) {
+  out.innerHTML = `<div class="note">${I.info}<span>Comparing every setting…</span></div>`;
+  try {
+    const r = await api(`/api/compare?a=${encodeURIComponent(a.id)}&b=${encodeURIComponent(b.id)}`);
+    out.innerHTML = `${a.brand !== b.brand ? `<div class="banner">${I.warn}<span>These are different brands, so most settings won't line up.</span></div>` : ""}
+      <div class="results-meta"><span><b style="color:var(--text)">${nf(r.diff.length)}</b> of ${nf(r.total_fields)} settings differ</span></div>
+      ${r.diff.length ? `<div class="table-wrap"><table class="data"><thead><tr><th>Setting</th><th>A · ${esc(a.name)}</th><th>B · ${esc(b.name)}</th></tr></thead><tbody>
+      ${r.diff.map((d) => `<tr><td class="mono">${esc(d.field)}</td><td class="mono diff-a">${esc(dash(d.a))}</td><td class="mono diff-b">${esc(dash(d.b))}</td></tr>`).join("")}</tbody></table></div>`
+      : `<div class="card empty"><h3>Identical</h3><p>Every setting in these two files matches.</p></div>`}`;
+  } catch (e) {
+    out.innerHTML = `<div class="banner">${I.warn}<span>${esc(e.message)}</span></div>`;
+  }
+}
+
+/* =====================================================================
+   Sites
+   ===================================================================== */
+async function viewSites() {
+  const main = $("#main");
+  if (!S.sites) { main.innerHTML = loadingView(); try { await getSites(); } catch (e) { main.innerHTML = `<div class="card empty"><h3>Couldn't load the site register</h3><p>${esc(e.message)}</p></div>`; return; } }
+  const sites = S.sites;
+  const lvOf = (r) => r.flags.some((f) => f.level === "red") ? "red" : r.flags.some((f) => f.level === "amber") ? "amber" : r.flags.length ? "info" : "ok";
+  const flagged = sites.filter((r) => r.flags.length).length;
+  const amber = sites.filter((r) => lvOf(r) === "amber" || lvOf(r) === "red").length;
+  main.innerHTML = `
+    <header class="page-head"><div class="eyebrow"><i></i>Sites</div><h1>Every wall we've installed</h1>
+      <p class="lede">Brand, chips, cards and firmware for each site, with anything that doesn't line up flagged in plain words.</p></header>
+    <section class="ov" aria-label="Sites overview" style="grid-template-columns:repeat(3,minmax(0,1fr))">
+      <div class="card ov-stat"><span class="label">Sites</span><b>${nf(sites.length)}</b><span class="meta">in the register</span></div>
+      <div class="card ov-stat"><span class="label">Check first</span><b style="color:var(--warn)">${nf(amber)}</b><span class="meta">sites to look at</span></div>
+      <div class="card ov-stat"><span class="label">With notes</span><b style="color:var(--info)">${nf(flagged - amber)}</b><span class="meta">worth knowing</span></div>
+    </section>
+    <div class="toolbar" role="search">
+      <label class="search">${I.search}<span class="sr">Search sites</span><input id="sq" type="search" autocomplete="off" placeholder="Search site, chip, card…" value="${esc(S.st.q)}"><kbd>/</kbd></label>
+      <label class="switch"><input type="checkbox" id="sflag" ${S.st.flag ? "checked" : ""}><span class="track" aria-hidden="true"></span>Only sites with flags</label>
+      <a class="btn" href="/api/export/sites.xlsx" download>${I.down}Export to Excel</a>
+    </div>
+    <div id="site-out"></div>`;
+  const render = () => {
+    const q = S.st.q.trim().toLowerCase();
+    const rows = sites.filter((r) => (!S.st.flag || r.flags.length) && (!q || matchQ(hay(r), q)))
+      .sort((a, b) => RANK[lvOf(a)] - RANK[lvOf(b)] || a.site.localeCompare(b.site));
+    const out = $("#site-out");
+    if (!rows.length) { out.innerHTML = emptyState("sites", S.st.q.trim()); wireClear(); return; }
+    out.innerHTML = `<div class="results-meta"><span>${nf(rows.length)} site${rows.length === 1 ? "" : "s"} · most urgent first</span></div><div class="site-list">${rows.map((r) => {
+      const lv = lvOf(r);
+      const files = [...r.config_ids.map((id) => S.cfg.find((x) => x.id === id)).filter(Boolean).map((i) => `<a href="#item=${encodeURIComponent(i.id)}">${esc(i.name)}</a>`),
+        ...r.firmware_ids.map((id) => S.fw.find((x) => x.id === id)).filter(Boolean).map((f) => `<a class="fw" href="#firmware" data-fw="${esc(f.card || "")}">${esc(f.name)}</a>`)].join("");
+      return `<details class="site"><summary>
+          <span class="st">${pill(lv)}</span>
+          <span class="nm">${esc(r.site)}<small>${esc(r.brands.join(" + ") || "—")} · ${esc(r.configs)} config${r.configs === 1 ? "" : "s"} · ${esc(r.firmware)} firmware</small></span>
+          <span class="hide-sm hide-md"><span class="cell-l">Driver chips</span><span class="chips">${r.chips.length ? r.chips.map((c) => `<span class="chip">${esc(c)}</span>`).join("") : "—"}</span></span>
+          <span class="hide-sm"><span class="cell-l">Cards</span><span class="chips">${r.cards.length ? r.cards.map((c) => `<span class="chip">${esc(c)}</span>`).join("") : '<span style="color:var(--text-3)">—</span>'}</span></span>
+          ${I.chev}</summary>
+        <div class="site-body">
+          <div class="facts"><span>Firmware on file: <b>${esc(r.fw_versions.filter(Boolean).join("; ") || "—")}</b></span><span>Chips: <b>${esc(r.chips.join(", ") || "—")}</b></span></div>
+          ${r.flags.length ? `<ul class="flags">${r.flags.map((f) => `<li>${pill(f.level)}<span>${esc(f.text)}<small>${esc(f.file)}</small></span></li>`).join("")}</ul>` : `<p class="allgood">${I.ok}Nothing flagged at this site.</p>`}
+          ${files ? `<div><div class="label" style="margin-bottom:6px">Files</div><div class="files">${files}</div></div>` : ""}
+        </div></details>`;
+    }).join("")}</div>`;
+    $$("#site-out a[data-fw]").forEach((a) => a.addEventListener("click", () => { S.fwq = a.dataset.fw; }));
+  };
+  $("#sq").addEventListener("input", (e) => { S.st.q = e.target.value; render(); });
+  $("#sflag").addEventListener("change", (e) => { S.st.flag = e.target.checked; render(); });
+  render();
+}
+
+/* =====================================================================
+   Firmware
+   ===================================================================== */
+function viewFirmware() {
+  $("#main").innerHTML = `
+    <header class="page-head"><div class="eyebrow"><i></i>Firmware</div><h1>Firmware we hold</h1>
+      <p class="lede">What card and chips each package is built for, and which tool flashes it.</p></header>
+    <div class="banner" style="background:var(--info-soft)">${I.info}<span>Flash only with the official tools: <b>NovaLCT</b> for NovaStar, <b>LEDUpgrade</b> or the factory for Colorlight. This tool never changes firmware.</span></div>
+    <div class="toolbar" role="search"><label class="search">${I.search}<span class="sr">Search firmware</span><input id="fq" type="search" autocomplete="off" placeholder="Find by card or driver chip… e.g. E320  3364  RV-S" value="${esc(S.fwq)}"><kbd>/</kbd></label></div>
+    <div id="fw-out"></div>`;
+  const render = () => {
+    const q = S.fwq.trim().toLowerCase();
+    const rows = S.fw.filter((f) => !q || matchQ(hay([f.name, f.card, f.version, f.chips, f.sites, f.brand]), q))
+      .sort((a, b) => (a.brand + a.card + a.version).localeCompare(b.brand + b.card + b.version));
+    const out = $("#fw-out");
+    if (!rows.length) { out.innerHTML = emptyState("firmware", S.fwq.trim()); $("#clear").addEventListener("click", () => { S.fwq = ""; route(); }); return; }
+    out.innerHTML = `<div class="results-meta"><span>${nf(rows.length)} package${rows.length === 1 ? "" : "s"}</span></div>
+      <div class="table-wrap"><table class="data"><thead><tr><th>Card</th><th>Brand</th><th>Version</th><th>Built for chips</th><th>Flash with</th><th class="hide-lg">Sites</th></tr></thead><tbody>
+      ${rows.map((f) => `<tr class="row" style="cursor:default"><td class="name"><span style="font-weight:600">${esc(dash(f.card))}</span>
+          <span class="sub">${esc([f.brand, f.version, (f.chips || []).join(", ")].filter(Boolean).join(" · "))}</span><span class="sub s2">${esc((f.sites || []).join(", "))}</span></td>
+        <td>${brandChip(f.brand)}</td><td class="mono">${esc(dash(f.version))}</td><td>${(f.chips || []).length ? f.chips.map((c) => `<span class="chip" style="margin:2px 4px 2px 0">${esc(c)}</span>`).join("") : "—"}</td>
+        <td>${esc(dash(f.flash_with))}${f.encrypted ? ' <span class="pill neutral">Encrypted</span>' : ""}</td><td class="sites hide-lg">${esc((f.sites || []).join(", "))}</td></tr>`).join("")}
+      </tbody></table></div>`;
+  };
+  $("#fq").addEventListener("input", (e) => { S.fwq = e.target.value; render(); });
+  render();
+}
+
+/* =====================================================================
+   Inspect
+   ===================================================================== */
+function viewInspect() {
+  $("#main").innerHTML = `
+    <header class="page-head"><div class="eyebrow"><i></i>Inspect</div><h1>Read any NovaStar LED config in your browser</h1>
+      <p class="lede">Drop a NovaStar .rcfgx file. You get a full spec card, plain-words checks, and a Light-up Preview of how the module scans and looks — all read in your browser. Nothing is uploaded, nothing is sent to a screen.</p></header>
+    <label class="drop" id="drop"><input type="file" id="ifile" class="sr" accept=".rcfgx,.rcvbp,.rcgfx,.zip">
+      <svg class="i" viewBox="0 0 24 24" style="width:30px;height:30px;color:var(--brand-ink)"><path d="M12 15V4M7.5 8.5 12 4l4.5 4.5M5 14v4.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V14"/></svg>
+      <b>Drop a config file here</b><span>or click to choose · NovaStar .rcfgx</span></label>
+    <div class="checks-list" aria-label="What gets checked">${["Damaged file", "Checksum", "Gamma curve", "Brightness", "Gray depth", "Refresh", "Calibration", "Older chips"].map((c) => `<span class="chip">${c}</span>`).join("")}</div>
+    <div id="insp-out" style="margin-top:18px"></div>`;
+  const drop = $("#drop"), inp = $("#ifile");
+  const took = async (f) => {
+    const out = $("#insp-out");
+    if (/\.rcvbp$/i.test(f.name)) {
+      out.innerHTML = `<div class="note">${I.info}<span>This page reads NovaStar <b>.rcfgx</b> files. Colorlight <b>.rcvbp</b> files need the desktop Control Room.</span></div>`;
+      return;
+    }
+    out.innerHTML = `<div class="note">${I.info}<span>Reading <b style="color:var(--text)">${esc(f.name)}</b> (${nf(Math.round(f.size / 1024))} KB) in your browser — nothing is uploaded.</span></div>`;
+    try {
+      const j = await VRO.inspectNova(f, window.VR_CHIPS || {});
+      if (location.hash !== "#inspect") return;
+      const item = { id: j.id, kind: "config", name: f.name, brand: j.brand, spec: j.spec || {}, findings: j.findings || [],
+                     level: j.level || "ok", sites: [], inspected: true };
+      S.cfg = S.cfg.filter((x) => x.id !== item.id).concat([item]);
+      if (j.layout && j.layout.module_cols) S.layouts[`id:${item.id}`] = j.layout;
+      location.hash = `item=${encodeURIComponent(item.id)}`;
+    } catch (e) {
+      out.innerHTML = `<div class="banner">${I.warn}<span>Couldn't read this file: ${esc(e.message)}</span></div>`;
+    }
+  };
+  ["dragenter", "dragover"].forEach((e) => drop.addEventListener(e, (ev) => { ev.preventDefault(); drop.classList.add("over"); }));
+  ["dragleave", "drop"].forEach((e) => drop.addEventListener(e, (ev) => { ev.preventDefault(); drop.classList.remove("over"); }));
+  drop.addEventListener("drop", (ev) => { const f = ev.dataTransfer.files[0]; if (f) took(f); });
+  inp.addEventListener("change", () => { if (inp.files[0]) took(inp.files[0]); inp.value = ""; });
+}
+
+/* ===================================================================== */
+let toastT = 0;
+function toast(msg) { const t = $("#toast"); t.textContent = msg; t.classList.add("on"); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("on"), 2200); }
+
+if (params.has("loading")) { $("#main").innerHTML = loadingView(); } else { route(); boot(); }
+</script>
+</body>
+</html>
